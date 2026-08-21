@@ -1,5 +1,5 @@
 /*!
- * ADMINER — DARK THEME
+ * ADMINER — DARK THEMES (11 selectable palettes)
  *
  * Loaded by Adminer's built-in dark-switcher plugin alongside adminer.css
  * (see https://www.adminer.org/plugins/ "Allow switching light and dark
@@ -10,26 +10,240 @@
  * themes can never drift out of sync. Keep it that way: if you need a new
  * rule, add the selector to adminer.css using var(--...), then (if needed)
  * a different value for that variable here — don't duplicate selectors.
+ *
+ * Multi-theme mechanism: every palette below is scoped under
+ * `:root[data-theme="<key>"]`, all in this one file (no extra CSS files,
+ * no extra volume mounts). The `theme-switcher.php` plugin
+ * (plugins-enabled/theme-switcher.php) sets that `data-theme` attribute on
+ * `<html>` from a cookie (restored pre-paint in head(), so no flash) and
+ * renders the `<select>` UI next to the ☀ toggle. The unscoped `:root`
+ * block below is the default (Tokyo Night) — it's what you get with no
+ * `data-theme` attribute at all, so nothing regresses if the plugin is
+ * ever removed or JS is disabled.
+ *
+ * `--lit` note: default.css uses it as the background for h2 ("Select:
+ * <table>" headers) and table `<thead>` — i.e. a highlighted panel, not a
+ * decorative banner. Keep it close in lightness to --dim (one small step
+ * up), never a saturated/bright hue — that's what made it read as a
+ * random blue banner instead of a theme-matched panel.
  */
 
 @import url("adminer.css");
 
 html {
-	/* Soft zinc charcoal + teal accent (not blue) */
-	--bg: #18181b;
-	--fg: #e4e4e7;
-	--dim: #27272a;
-	--lit: #134e4a;
-	--border: #3f3f46;
-	--accent: #2dd4bf;
-	--accent-fg: #042f2e;
-	--accent-hover: #5eead4;
-	--muted: #a1a1aa;
-	--warn-bg: #422006;
-	--warn-fg: #fbbf24;
+	/* Tokyo Night (default) — deep navy/indigo base + vibrant blue accent */
+	--bg: #1a1b26;
+	--fg: #c0caf5;
+	--dim: #20222f;
+	--lit: #242837;
+	--border: #3b4261;
+	--accent: #7aa2f7;
+	--accent-fg: #1a1b26;
+	--accent-hover: #89b4fa;
+	--muted: #565f89;
+	--warn-bg: #3d2b1f;
+	--warn-fg: #e0af68;
+	--char: #9ece6a;
+	--date: #e0af68;
+	--enum: #7dcfff;
+	--binary: #f7768e;
 }
 
-.char { color: #34d399; }
-.date { color: #fbbf24; }
-.enum { color: #5eead4; }
-.binary { color: #fb7185; }
+:root[data-theme="nord"] {
+	/* Nord — cool arctic blue-grey, desaturated and calm */
+	--bg: #2e3440;
+	--fg: #d8dee9;
+	--dim: #3b4252;
+	--lit: #3f4759;
+	--border: #4c566a;
+	--accent: #88c0d0;
+	--accent-fg: #2e3440;
+	--accent-hover: #9cd0dd;
+	--muted: #7b88a1;
+	--warn-bg: #4b3a24;
+	--warn-fg: #ebcb8b;
+	--char: #a3be8c;
+	--date: #ebcb8b;
+	--enum: #88c0d0;
+	--binary: #bf616a;
+}
+
+:root[data-theme="github-dimmed"] {
+	/* GitHub Dark Dimmed — muted slate, low contrast, easy on the eyes */
+	--bg: #22272e;
+	--fg: #adbac7;
+	--dim: #2d333b;
+	--lit: #323a45;
+	--border: #4b5159;
+	--accent: #316dca;
+	--accent-fg: #ffffff;
+	--accent-hover: #478be0;
+	--muted: #768390;
+	--warn-bg: #341a00;
+	--warn-fg: #c69026;
+	--char: #57ab5a;
+	--date: #c69026;
+	--enum: #6cb6ff;
+	--binary: #e5534b;
+}
+
+:root[data-theme="onedark"] {
+	/* One Dark Pro — classic Atom/VSCode warm charcoal */
+	--bg: #282c34;
+	--fg: #abb2bf;
+	--dim: #2c313a;
+	--lit: #2f343d;
+	--border: #3e4451;
+	--accent: #61afef;
+	--accent-fg: #282c34;
+	--accent-hover: #7ec1f7;
+	--muted: #5c6370;
+	--warn-bg: #3a2e1a;
+	--warn-fg: #e5c07b;
+	--char: #98c379;
+	--date: #e5c07b;
+	--enum: #56b6c2;
+	--binary: #e06c75;
+}
+
+:root[data-theme="dracula"] {
+	/* Dracula — iconic deep purple base + neon pink/green/cyan */
+	--bg: #282a36;
+	--fg: #f8f8f2;
+	--dim: #313342;
+	--lit: #383a4d;
+	--border: #44475a;
+	--accent: #bd93f9;
+	--accent-fg: #282a36;
+	--accent-hover: #d6b8ff;
+	--muted: #6272a4;
+	--warn-bg: #4a3b1f;
+	--warn-fg: #f1fa8c;
+	--char: #50fa7b;
+	--date: #ffb86c;
+	--enum: #8be9fd;
+	--binary: #ff5555;
+}
+
+:root[data-theme="monokai"] {
+	/* Monokai — warm charcoal, punchy Sublime/VSCode syntax colors */
+	--bg: #272822;
+	--fg: #f8f8f2;
+	--dim: #2d2e27;
+	--lit: #33342c;
+	--border: #49483e;
+	--accent: #66d9ef;
+	--accent-fg: #272822;
+	--accent-hover: #85e3f5;
+	--muted: #75715e;
+	--warn-bg: #3a2f14;
+	--warn-fg: #fd971f;
+	--char: #a6e22e;
+	--date: #fd971f;
+	--enum: #ae81ff;
+	--binary: #f92672;
+}
+
+:root[data-theme="solarized-dark"] {
+	/* Solarized Dark — muted teal base, the classic low-contrast favorite */
+	--bg: #002b36;
+	--fg: #839496;
+	--dim: #073642;
+	--lit: #0a4552;
+	--border: #586e75;
+	--accent: #268bd2;
+	--accent-fg: #002b36;
+	--accent-hover: #3ea1e8;
+	--muted: #586e75;
+	--warn-bg: #3a2a06;
+	--warn-fg: #b58900;
+	--char: #859900;
+	--date: #b58900;
+	--enum: #2aa198;
+	--binary: #dc322f;
+}
+
+:root[data-theme="gruvbox-dark"] {
+	/* Gruvbox Dark — retro warm earth tones, Vim/Neovim favorite */
+	--bg: #282828;
+	--fg: #ebdbb2;
+	--dim: #32302f;
+	--lit: #3c3836;
+	--border: #504945;
+	--accent: #fe8019;
+	--accent-fg: #282828;
+	--accent-hover: #fda45e;
+	--muted: #928374;
+	--warn-bg: #3a2f14;
+	--warn-fg: #fabd2f;
+	--char: #b8bb26;
+	--date: #fabd2f;
+	--enum: #8ec07c;
+	--binary: #fb4934;
+}
+
+:root[data-theme="catppuccin-mocha"] {
+	/* Catppuccin Mocha — soft pastel-on-dark, current community favorite */
+	--bg: #1e1e2e;
+	--fg: #cdd6f4;
+	--dim: #24243a;
+	--lit: #313244;
+	--border: #45475a;
+	--accent: #cba6f7;
+	--accent-fg: #1e1e2e;
+	--accent-hover: #dbc4fa;
+	--muted: #6c7086;
+	--warn-bg: #4a3a1f;
+	--warn-fg: #f9e2af;
+	--char: #a6e3a1;
+	--date: #fab387;
+	--enum: #94e2d5;
+	--binary: #f38ba8;
+}
+
+:root[data-theme="night-owl"] {
+	/* Night Owl — deep navy, tuned by Sarah Drasner for late-night coding */
+	--bg: #011627;
+	--fg: #d6deeb;
+	--dim: #071e33;
+	--lit: #1d3b53;
+	--border: #2c5271;
+	--accent: #82aaff;
+	--accent-fg: #011627;
+	--accent-hover: #a1c1ff;
+	--muted: #637777;
+	--warn-bg: #3a2a12;
+	--warn-fg: #ecc48d;
+	--char: #addb67;
+	--date: #ecc48d;
+	--enum: #7fdbca;
+	--binary: #ef5350;
+}
+
+:root[data-theme="ayu-dark"] {
+	/* Ayu Dark — near-black base, warm golden-orange accent ("ayu" = sun) */
+	--bg: #0a0e14;
+	--fg: #b3b1ad;
+	--dim: #0d1017;
+	--lit: #131721;
+	--border: #1b2733;
+	--accent: #e6b450;
+	--accent-fg: #0a0e14;
+	--accent-hover: #f0c674;
+	--muted: #4d5566;
+	--warn-bg: #3a2a10;
+	--warn-fg: #ffd173;
+	--char: #aad94c;
+	--date: #ffd173;
+	--enum: #59c2ff;
+	--binary: #f07178;
+}
+
+.char { color: var(--char); }
+.date { color: var(--date); }
+.enum { color: var(--enum); }
+.binary { color: var(--binary); }
+
+#content h2 {
+	background-color: var(--dim);
+}
