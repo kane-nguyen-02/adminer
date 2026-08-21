@@ -1,0 +1,47 @@
+services:
+  pg-view:
+    image: lcurrol/pg-view:latest
+    container_name: pg-view
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - pg_view_data:/app/.data
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+      PORT: 3000
+      PGVIEW_USERNAME: admin
+      PGVIEW_PASSWORD: admin
+
+  adminer:
+    build:
+      context: ./adminer
+      dockerfile: Dockerfile
+    image: cloudbeaver-adminer:6.0.1-mongodb
+    container_name: adminer
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./adminer/adminer.css:/var/www/html/adminer.css:ro
+      - ./adminer/adminer-dark.css:/var/www/html/adminer-dark.css:ro
+      - ./adminer/plugins-enabled/menu-links.php:/var/www/html/plugins-enabled/menu-links.php:ro
+      - ./adminer/plugins-enabled/default-pgsql.php:/var/www/html/plugins-enabled/default-pgsql.php:ro
+      - ./adminer/plugins-enabled/mongo.php:/var/www/html/plugins-enabled/mongo.php:ro
+      - ./adminer/plugins-enabled/redis.php:/var/www/html/plugins-enabled/redis.php:ro
+      - ./adminer/plugins-enabled/login-ip.php:/var/www/html/plugins-enabled/login-ip.php:ro
+      - ./adminer/plugins-enabled/cell-filter.php:/var/www/html/plugins-enabled/cell-filter.php:ro
+      - ./adminer/plugins-enabled/select-shortcuts.php:/var/www/html/plugins-enabled/select-shortcuts.php:ro
+      # - ./adminer/plugins-enabled/resize-menu.php:/var/www/html/plugins-enabled/resize-menu.php:ro
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+      ADMINER_DEFAULT_SERVER: localhost
+      ADMINER_PLUGINS: >-
+        dark-switcher
+        tables-filter
+        edit-foreign
+        edit-textarea
+        enum-option
+        dump-json
+        sql-log
+
+volumes:
+  pg_view_data:
