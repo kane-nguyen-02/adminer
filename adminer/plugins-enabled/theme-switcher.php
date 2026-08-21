@@ -10,7 +10,7 @@
  * why). This plugin only:
  *   1. Restores `data-theme` from the `adminer_theme` cookie in head()
  *      (fires before body paint, so there's no flash of the wrong theme).
- *   2. Renders a small <select> fixed above the ☀ toggle; picking a theme
+ *   2. Renders a small <select> fixed on the same row as Shortcuts + ☀; picking a theme
  *      sets the cookie + `data-theme` attribute live, client-side only —
  *      no reload, no server round-trip, and it composes untouched with the
  *      existing light/dark toggle (that keeps working exactly as before,
@@ -49,7 +49,7 @@ final class AdminerThemeSwitcher extends Adminer\Plugin {
 
 	function navigation($missing) {
 		?>
-<select id="adminer-theme-switcher" title="Dark theme" style="position: fixed; z-index: 10001; right: .5em; bottom: 2.5em; font: inherit; font-size: smaller; max-width: 9em;">
+<select id="adminer-theme-switcher" title="Dark theme" style="position: fixed; z-index: 10001; right: 9.75em; bottom: .5em; font: inherit; font-size: smaller; max-width: 9em;">
 <?php foreach (self::THEMES as $key => $label): ?>
 	<option value="<?php echo Adminer\h($key); ?>"><?php echo Adminer\h($label); ?></option>
 <?php endforeach; ?>

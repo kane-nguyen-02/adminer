@@ -355,7 +355,7 @@ final class AdminerSelectShortcuts extends Adminer\Plugin {
 			<div class="ssh-row"><kbd>${MOD_LABEL}+F</kbd><span>Focus Search</span></div>
 			<div class="ssh-row"><kbd>${MOD_LABEL}+A</kbd><span>Select all (page)</span></div>
 			<div class="ssh-row"><kbd>${MOD_LABEL}+X</kbd><span>Export</span></div>
-			<div class="ssh-row"><kbd>${MOD_LABEL}+R</kbd><span>Reset filters</span></div>
+			<div class="ssh-row"><kbd>${MOD_LABEL}+Backspace</kbd><span>Reset filters</span></div>
 			<div class="ssh-row"><kbd>${MOD_LABEL}+H</kbd><span>Ẩn / hiện bảng này</span></div>
 			<div class="ssh-row"><kbd>Ctrl+S</kbd><span>Save (Edit / Modify)</span></div>
 			`
@@ -399,7 +399,7 @@ final class AdminerSelectShortcuts extends Adminer\Plugin {
 			['input[type="submit"][name="delete"]', `${MOD_LABEL}+D`],
 			['#save', `${MOD_LABEL}+S / Ctrl+S`],
 			['input[type="submit"][name="export"]', `${MOD_LABEL}+X`],
-			['#select-reset', `${MOD_LABEL}+R`],
+			['#select-reset', `${MOD_LABEL}+Backspace`],
 		];
 		for (const [sel, key] of map) {
 			const el = document.querySelector(sel);
@@ -477,7 +477,7 @@ final class AdminerSelectShortcuts extends Adminer\Plugin {
 				case 'KeyX':
 					handled = clickExport();
 					break;
-				case 'KeyR':
+				case 'Backspace':
 					handled = resetSelectFilters();
 					break;
 				default:
