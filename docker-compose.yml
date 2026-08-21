@@ -20,6 +20,7 @@ services:
     container_name: adminer
     restart: unless-stopped
     network_mode: host
+    command: ["php", "-S", "[::]:6868", "-t", "/var/www/html"]
     volumes:
       - ./adminer/adminer.css:/var/www/html/adminer.css:ro
       - ./adminer/adminer-dark.css:/var/www/html/adminer-dark.css:ro
