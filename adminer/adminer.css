@@ -271,16 +271,37 @@ label {
 	/* default.css uses width:7ex + border-box; our padding + number
 	   spinners were clipping digits — size the content box instead. */
 	box-sizing: content-box;
-	width: 4ch;
-	min-width: 4ch;
+	width: 7ch;
+	min-width: 7ch;
 	padding: 4px 6px;
 }
 
 #content #form input.size[type="number"] {
-	width: 5ch;
-	min-width: 5ch;
-	/* Reserve space for spinner so digits stay fully visible */
-	padding-inline-end: 1.25em;
+	width: 8ch;
+	/* min-width: 8ch; */
+	padding-inline-end: 1.5em;
+}
+
+/* Limit / Text length: width is set by JS to match value length (ch).
+   Spinners hidden; no extra end-padding needed. */
+#content #form input.size[name="limit"],
+#content #form input.size[name="text_length"] {
+	box-sizing: content-box;
+	width: 3ch;
+	min-width: 3ch;
+	padding: 4px 6px;
+	appearance: textfield;
+	-moz-appearance: textfield;
+}
+
+#content #form input.size[name="limit"]::-webkit-outer-spin-button,
+#content #form input.size[name="limit"]::-webkit-inner-spin-button,
+#content #form input.size[name="text_length"]::-webkit-outer-spin-button,
+#content #form input.size[name="text_length"]::-webkit-inner-spin-button {
+	appearance: none;
+	-webkit-appearance: none;
+	margin: 0;
+	display: none;
 }
 
 #content #form > fieldset > legend {
