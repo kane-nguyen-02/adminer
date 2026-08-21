@@ -1,17 +1,4 @@
 services:
-  pg-view:
-    image: lcurrol/pg-view:latest
-    container_name: pg-view
-    restart: unless-stopped
-    network_mode: host
-    volumes:
-      - pg_view_data:/app/.data
-    environment:
-      TZ: Asia/Ho_Chi_Minh
-      PORT: 3000
-      PGVIEW_USERNAME: admin
-      PGVIEW_PASSWORD: admin
-
   adminer:
     build:
       context: ./adminer
@@ -25,6 +12,7 @@ services:
       - ./adminer/adminer.css:/var/www/html/adminer.css:ro
       - ./adminer/adminer-dark.css:/var/www/html/adminer-dark.css:ro
       - ./adminer/plugins-enabled/menu-links.php:/var/www/html/plugins-enabled/menu-links.php:ro
+      - ./adminer/plugins-enabled/brand-name.php:/var/www/html/plugins-enabled/brand-name.php:ro
       - ./adminer/plugins-enabled/default-pgsql.php:/var/www/html/plugins-enabled/default-pgsql.php:ro
       - ./adminer/plugins-enabled/mongo.php:/var/www/html/plugins-enabled/mongo.php:ro
       - ./adminer/plugins-enabled/redis.php:/var/www/html/plugins-enabled/redis.php:ro
@@ -46,6 +34,3 @@ services:
         enum-option
         dump-json
         sql-log
-
-volumes:
-  pg_view_data:

@@ -25,7 +25,7 @@ final class AdminerSelectSearchable extends Adminer\Plugin {
 	margin: 0;
 	padding: 0;
 	border: 1px solid var(--border, #888);
-	border-radius: 4px;
+	border-radius: var(--radius-sm, 6px);
 	background: var(--bg, #fff);
 	color: var(--fg, inherit);
 	box-shadow: 0 4px 16px rgba(0,0,0,.25);
@@ -40,7 +40,7 @@ final class AdminerSelectSearchable extends Adminer\Plugin {
 	padding: .4em .55em;
 	border: 0;
 	border-bottom: 1px solid var(--border, #888);
-	border-radius: 4px 4px 0 0;
+	border-radius: var(--radius-sm, 6px) var(--radius-sm, 6px) 0 0;
 	background: var(--dim, #f6f6f6);
 	color: inherit;
 	font: inherit;

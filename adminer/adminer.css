@@ -38,6 +38,7 @@ html {
 	--warn-bg: #fdf3e0;
 	--warn-fg: #8a5a00;
 	--radius: 8px;
+	--radius-sm: 6px;
 }
 
 /* ==========================================================================
@@ -254,6 +255,18 @@ label {
 	border-radius: var(--radius);
 	background: var(--dim);
 	padding: 10px 12px 8px;
+}
+
+/* Soften inner controls so they match rounded fieldsets / portal */
+#content #form select,
+#content #form input[type="search"],
+#content #form input[type="number"],
+#content #form input[type="text"],
+#content #form input.size,
+#content #form input[type="submit"],
+#content #form input[type="button"],
+#content #form button {
+	border-radius: var(--radius-sm);
 }
 
 /* Limit / Text length: tight box — Adminer `.size` is 7ex with border-box,
