@@ -2,7 +2,8 @@
 # Adminer's bundled Mongo driver plugin (plugins/drivers/mongo.php) can
 # actually connect, not just appear in the driver dropdown.
 # Redis needs no extension (its driver talks raw sockets in pure PHP).
-FROM adminer:latest
+# Pin to 6.0.1 (same as runtime ADMINER_VERSION) — avoid silent upstream drift from :latest.
+FROM adminer:6.0.1
 
 # The base image drops to the unprivileged `adminer` user; installing a
 # PHP extension needs root, then we hand control back to that same user
