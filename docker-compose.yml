@@ -18,6 +18,7 @@ services:
       - ./adminer/plugins-enabled/redis.php:/var/www/html/plugins-enabled/redis.php:ro
       - ./adminer/plugins-enabled/login-ip.php:/var/www/html/plugins-enabled/login-ip.php:ro
       - ./adminer/plugins-enabled/cell-filter.php:/var/www/html/plugins-enabled/cell-filter.php:ro
+      - ./adminer/plugins-enabled/row-num.php:/var/www/html/plugins-enabled/row-num.php:ro
       - ./adminer/plugins-enabled/select-shortcuts.php:/var/www/html/plugins-enabled/select-shortcuts.php:ro
       - ./adminer/plugins-enabled/select-searchable.php:/var/www/html/plugins-enabled/select-searchable.php:ro
       - ./adminer/plugins-enabled/select-limit-persist.php:/var/www/html/plugins-enabled/select-limit-persist.php:ro
