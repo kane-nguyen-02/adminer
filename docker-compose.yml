@@ -24,6 +24,8 @@ services:
       - ./adminer/plugins-enabled/select-limit-persist.php:/var/www/html/plugins-enabled/select-limit-persist.php:ro
       - ./adminer/plugins-enabled/theme-switcher.php:/var/www/html/plugins-enabled/theme-switcher.php:ro
       - ./adminer/plugins-enabled/table-style-switcher.php:/var/www/html/plugins-enabled/table-style-switcher.php:ro
+      - ./adminer/plugins-enabled/row-highlight.php:/var/www/html/plugins-enabled/row-highlight.php:ro
+      - ./adminer/plugins-enabled/select-check-ui.php:/var/www/html/plugins-enabled/select-check-ui.php:ro
       # - ./adminer/plugins-enabled/resize-menu.php:/var/www/html/plugins-enabled/resize-menu.php:ro
     environment:
       TZ: Asia/Ho_Chi_Minh

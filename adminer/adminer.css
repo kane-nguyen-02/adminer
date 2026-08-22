@@ -197,6 +197,17 @@ table, td, th, .column {
 	background: var(--dim);
 }
 
+/* Select #table: click-highlight (row-active) vs checkbox-selected (checked) */
+.js #table.checkable tbody tr.row-active > td,
+.js #table.checkable tbody tr.row-active > th {
+	background: color-mix(in srgb, var(--accent, #3574f0) 16%, var(--bg, #fff));
+}
+
+.js #table.checkable tbody tr.row-active.checked > td,
+.js #table.checkable tbody tr.row-active.checked > th {
+	background: color-mix(in srgb, var(--accent, #3574f0) 22%, var(--lit, #ddf));
+}
+
 .char { color: #1a7f37; }
 .date { color: #8250df; }
 .enum { color: #0a7d8c; }
