@@ -39,7 +39,19 @@ html {
 	--warn-fg: #8a5a00;
 	--radius: 8px;
 	--radius-sm: 6px;
+	/* Table chrome — overridden by table-style-switcher via data-* attrs */
+	--table-border-style: solid;
+	--table-border-color: var(--border);
 }
+
+html[data-table-border-style="solid"] { --table-border-style: solid; }
+html[data-table-border-style="dashed"] { --table-border-style: dashed; }
+html[data-table-border-style="dotted"] { --table-border-style: dotted; }
+html[data-table-border-style="none"] { --table-border-style: none; }
+
+html[data-table-border-color="theme"] { --table-border-color: var(--border); }
+html[data-table-border-color="muted"] { --table-border-color: #999; }
+html[data-table-border-color="accent"] { --table-border-color: var(--accent); }
 
 /* ==========================================================================
    LINKS, HEADINGS, MISC — default.css already colors h1/h2/#menu/.footer/etc.
@@ -175,6 +187,11 @@ label {
 /* ==========================================================================
    TABLES — row striping / value colors that default.css hardcodes
    ========================================================================== */
+
+table, td, th, .column {
+	border-color: var(--table-border-color);
+	border-style: var(--table-border-style);
+}
 
 .odds tbody tr:nth-child(2n) {
 	background: var(--dim);
