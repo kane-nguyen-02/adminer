@@ -25,8 +25,11 @@ td[id^="val["].cell-filter-target {
 #cell-filter-menu {
 	position: fixed;
 	z-index: 10050;
-	min-width: 14em;
-	max-width: 28em;
+	min-width: 18em;
+	/* A uuid is 36 chars; at 28em the operator select + Filter button left the
+	   value input ~248px against ~266px of text, clipping the last 18px of
+	   every uuid (measured). Widen, and stack the input on its own row below. */
+	max-width: 34em;
 	margin: 0;
 	padding: .25em 0;
 	border: 1px solid var(--border, #888);
@@ -60,24 +63,52 @@ td[id^="val["].cell-filter-target {
 	border: 0;
 	border-top: 1px solid var(--border, #888);
 }
+/* Explicit 2x2 grid: operator + Filter share the top row, the value input
+   spans the full width beneath them. DOM order stays select -> input -> button
+   (keyboard order), so the areas are assigned explicitly rather than relying
+   on auto-placement. */
 #cell-filter-menu .cell-filter-row {
 	cursor: default;
-	display: flex;
-	flex-wrap: wrap;
+	display: grid;
+	grid-template-columns: 1fr auto;
 	gap: .35em;
 	align-items: center;
 }
 #cell-filter-menu .cell-filter-row select,
 #cell-filter-menu .cell-filter-row input {
 	font: inherit;
+	min-width: 0;
 	max-width: 100%;
 	color: inherit;
 	background: var(--bg, #fff);
 	border: 1px solid var(--border, #888);
+	border-radius: var(--radius-sm, 4px);
+	padding: .2em .35em;
+}
+#cell-filter-menu .cell-filter-row select {
+	grid-area: 1 / 1 / 2 / 2;
+}
+#cell-filter-menu .cell-filter-row button {
+	grid-area: 1 / 2 / 2 / 3;
+	width: auto;
+	padding: .25em .8em;
+	border: 1px solid var(--border, #888);
+	border-radius: var(--radius-sm, 4px);
 }
 #cell-filter-menu .cell-filter-row input[type="search"] {
-	flex: 1 1 8em;
-	min-width: 6em;
+	grid-area: 2 / 1 / 3 / 3;
+	width: 100%;
+	box-sizing: border-box;
+	/* monospace makes uuids/ids scannable and the width predictable */
+	font-family: var(--mono-stack, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+	/* Size off the content, not the container: a uuid is 36 chars, so 40ch of
+	   monospace guarantees it fits with room for the padding. This is what
+	   actually widens the menu - max-width alone is only a cap, never a target.
+	   Clamped against the viewport so it cannot overflow on a phone. */
+	min-width: min(40ch, 74vw);
+}
+#cell-filter-menu .cell-filter-row input[type="search"]:disabled {
+	opacity: .5;
 }
 #cell-filter-menu .cell-filter-hint {
 	padding: .25em .75em .4em;
@@ -362,7 +393,20 @@ td[id^="val["].cell-filter-target {
 		}
 	}, true);
 
-	window.addEventListener('scroll', () => {
+	// capture:true on window catches scroll from ANY element, and `scroll` does
+	// not bubble - so pasting a value longer than the input fired the input's
+	// own horizontal scroll and closed the menu mid-paste. That is why
+	// "right-click then Ctrl+V" appeared not to work: the paste succeeded and
+	// the menu vanished. Ignore scrolls originating inside the menu.
+	window.addEventListener('scroll', (e) => {
+		const menu = document.getElementById(MENU_ID);
+		if (!menu) {
+			return;
+		}
+		const target = e.target;
+		if (target instanceof Node && (menu === target || menu.contains(target))) {
+			return;
+		}
 		if (Date.now() < ignoreScrollUntil) {
 			return;
 		}

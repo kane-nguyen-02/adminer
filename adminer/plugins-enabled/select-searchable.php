@@ -22,47 +22,52 @@ final class AdminerSelectSearchable extends Adminer\Plugin {
 	flex-direction: column;
 	min-width: 12em;
 	max-width: min(28em, calc(100vw - 16px));
+	max-height: min(18em, calc(100vh - 24px));
 	margin: 0;
-	padding: 0;
-	border: 1px solid var(--border, #888);
-	border-radius: var(--radius-sm, 6px);
+	padding: .25rem;
+	border: 1px solid color-mix(in srgb, var(--border, #888) 80%, transparent);
+	border-radius: .5rem;
 	background: var(--bg, #fff);
 	color: var(--fg, inherit);
-	box-shadow: 0 4px 16px rgba(0,0,0,.25);
+	box-shadow: 0 10px 38px -10px rgba(0, 0, 0, .35), 0 0 0 1px color-mix(in srgb, var(--border, #888) 40%, transparent);
 	font: inherit;
+	overflow: hidden;
 }
 #ss-portal .ss-filter {
 	flex: 0 0 auto;
 	display: block;
 	width: 100%;
 	box-sizing: border-box;
-	margin: 0;
-	padding: .4em .55em;
-	border: 0;
-	border-bottom: 1px solid var(--border, #888);
-	border-radius: var(--radius-sm, 6px) var(--radius-sm, 6px) 0 0;
+	margin: 0 0 .2rem;
+	padding: .45em .6em;
+	border: 1px solid color-mix(in srgb, var(--border, #888) 70%, transparent);
+	border-radius: .375rem;
 	background: var(--dim, #f6f6f6);
 	color: inherit;
 	font: inherit;
 	outline: none;
 }
 #ss-portal .ss-filter:focus {
-	box-shadow: inset 0 0 0 1px var(--accent, #3574f0);
+	border-color: var(--accent, #3574f0);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent, #3574f0) 25%, transparent);
 }
 #ss-portal .ss-list {
 	flex: 1 1 auto;
 	overflow: auto;
 	margin: 0;
-	padding: .2em 0;
+	padding: .15rem 0;
 	list-style: none;
+	overscroll-behavior: contain;
+	scrollbar-width: thin;
 }
 #ss-portal .ss-item {
 	display: block;
-	width: 100%;
 	box-sizing: border-box;
-	margin: 0;
-	padding: .3em .6em;
+	margin: 0 .15rem;
+	width: calc(100% - .3rem);
+	padding: .38em .55em;
 	border: 0;
+	border-radius: .35rem;
 	background: transparent;
 	color: inherit;
 	font: inherit;
@@ -74,7 +79,7 @@ final class AdminerSelectSearchable extends Adminer\Plugin {
 }
 #ss-portal .ss-item:hover,
 #ss-portal .ss-item[aria-selected="true"] {
-	background: color-mix(in srgb, var(--accent, #3574f0) 22%, transparent);
+	background: color-mix(in srgb, var(--accent, #3574f0) 18%, transparent);
 }
 #ss-portal .ss-empty {
 	padding: .5em .65em;
@@ -165,10 +170,23 @@ final class AdminerSelectSearchable extends Adminer\Plugin {
 		}
 		closePortal();
 		fireChange(sel);
+
+		// After choosing a SEARCH column, hand focus to that row's value input,
+		// not back to the <select>. Leaving focus on the select meant the next
+		// keystrokes - which the user intends for the value - re-opened this
+		// portal (a printable key opens it with initialQuery) and Enter then
+		// picked items[activeIndex] || items[0], silently rewriting the column.
+		// That is how `createdAt` turned into `itemName`. Moving focus forward
+		// also matches what every other DB client does: pick column -> type value.
+		const searchRow = sel.matches('#fieldset-search select[name$="[col]"]')
+			? sel.closest('#fieldset-search > div')
+			: null;
+		const nextInput = searchRow?.querySelector('input[name$="[val]"]');
+		const focusTarget = nextInput || sel;
 		try {
-			sel.focus({ preventScroll: true });
+			focusTarget.focus({ preventScroll: true });
 		} catch (_) {
-			sel.focus();
+			focusTarget.focus();
 		}
 	};
 
@@ -371,22 +389,22 @@ final class AdminerSelectSearchable extends Adminer\Plugin {
 
 	document.addEventListener('scroll', (e) => {
 		const portal = document.getElementById(PORTAL_ID);
-		if (!portal) {
+		if (!portal || !activeSelect) {
 			return;
 		}
-		// Wheel/scroll inside the portal must not close it
-		if (e.target === portal || portal.contains(e.target)) {
+		if (e.target instanceof Element && (portal === e.target || portal.contains(e.target))) {
 			return;
 		}
 		if (Date.now() < ignoreScrollUntil) {
 			return;
 		}
-		closePortal();
+		placePortal(portal, activeSelect);
 	}, true);
 
 	window.addEventListener('resize', () => {
-		if (document.getElementById(PORTAL_ID)) {
-			closePortal();
+		const portal = document.getElementById(PORTAL_ID);
+		if (portal && activeSelect) {
+			placePortal(portal, activeSelect);
 		}
 	});
 

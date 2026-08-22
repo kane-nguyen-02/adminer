@@ -50,6 +50,7 @@ final class AdminerRowHighlight extends Adminer\Plugin {
 			}
 		}
 		tr.classList.add(CLASS);
+		tr.dispatchEvent(new CustomEvent('adminer-row-active', { bubbles: true }));
 	};
 
 	const orig = window.tableClick;

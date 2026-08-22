@@ -37,8 +37,15 @@ html {
 	--muted: #6b7280;
 	--warn-bg: #fdf3e0;
 	--warn-fg: #8a5a00;
-	--radius: 8px;
-	--radius-sm: 6px;
+	/* Slightly tighter than before (was 8/6): at button size 8px read as
+	   almost pill-shaped. Kept as the single source for inputs AND buttons so
+	   the two stay visually consistent. */
+	--radius: 6px;
+	--radius-sm: 5px;
+	/* Monospace stack for machine values (uuids, ids, timestamps) so they are
+	   scannable and their rendered width is predictable. Referenced by
+	   cell-filter.php; every consumer also carries an inline fallback. */
+	--mono-stack: ui-monospace, "JetBrains Mono", SFMono-Regular, Menlo, Consolas, monospace;
 	/* Table chrome — overridden by table-style-switcher via data-* attrs */
 	--table-border-style: solid;
 	--table-border-color: var(--border);
@@ -157,6 +164,12 @@ input[type="reset"]:hover {
 	background: var(--accent-hover);
 }
 
+/* `input:not([type])` matters: Adminer emits the login fields as bare
+   <input name="auth[server]"> with NO type attribute, so input[type="text"]
+   never matched them and they fell back to the browser default - square
+   corners, 2px grey border, grey fill - right next to the styled password
+   box. That mismatch is exactly the "style phải thống nhất" complaint. */
+input:not([type]),
 input[type="text"],
 input[type="search"],
 input[type="number"],
@@ -172,6 +185,7 @@ textarea {
 }
 
 input:focus,
+input:not([type]):focus,
 select:focus,
 textarea:focus {
 	outline: 2px solid var(--accent);
@@ -200,7 +214,8 @@ table, td, th, .column {
 /* Select #table: click-highlight (row-active) vs checkbox-selected (checked) */
 .js #table.checkable tbody tr.row-active > td,
 .js #table.checkable tbody tr.row-active > th {
-	background: color-mix(in srgb, var(--accent, #3574f0) 16%, var(--bg, #fff));
+	background: color-mix(in srgb, var(--accent, #3574f0) 22%, var(--bg, #fff));
+	box-shadow: inset 3px 0 0 var(--accent, #3574f0);
 }
 
 .js #table.checkable tbody tr.row-active.checked > td,
@@ -420,4 +435,764 @@ table, td, th, .column {
 #content #form #noindex:empty {
 	display: none;
 	padding: 0;
+}
+
+
+/* ==========================================================================
+   SELECT TOOLBAR + GRID HEADER  (round 2)
+   Pure CSS on top of Adminer's existing DOM — no HTML/JS changes, so
+   Adminer's own toggle / add-row / keyboard logic is untouched.
+   ========================================================================== */
+
+/* --- E6: give Search the horizontal space, shrink the rest ---------------
+   Search is where the work happens and it holds multi-row uuid values;
+   Limit / Text length / Action only ever hold a few characters. */
+#content #form > fieldset:has(> legend > a[href*="#fieldset-select"]),
+#content #form > fieldset:has(> legend > a[href*="#fieldset-sort"]) {
+	flex: 0 1 auto;
+	min-width: 0;
+}
+
+/* Limit / Text length / Action carry no toggle link — size them to content. */
+#content #form > fieldset:not(:has(> legend > a.toggle)) {
+	flex: 0 0 auto;
+}
+
+/* --- E1: search value inputs must fit a 36-char uuid --------------------
+   These were 193px against ~266px of uuid text, so every id was clipped.
+   Sized in ch off a monospace face so the fit is exact rather than guessed.
+   Three ids of specificity to win over the plugin's own injected <style>. */
+#content #form #fieldset-search input[name$="[val]"] {
+	/* Deliberately a FIXED width, not `field-sizing: content`.
+	   #content is as wide as the result grid, so on a table with long columns
+	   it is far wider than the window. A content-sized (or flex-grown) input
+	   inherited that width and dragged the whole toolbar past the right edge
+	   of the viewport. A uuid is 36 chars, so 38ch fits the widest common
+	   value with no growth and nothing to overflow. */
+	flex: 0 0 auto;
+	/* 44ch, not 38ch: a uuid is 36 chars and must be readable in full ("id
+	   phải hiển thị rõ ràng"), with headroom so a prefixed/suffixed value is
+	   not clipped either. Still a FIXED width - it must never grow with the
+	   stretched body, which is what pushed the toolbar off-screen before. */
+	width: 44ch;
+	max-width: 100%;
+	font-family: var(--mono-stack);
+	font-size: 0.92em;
+}
+
+#content #form #fieldset-search > div {
+	row-gap: 6px;
+}
+
+/* --- keep the toolbar inside the window ---------------------------------
+   #content stretches to the result grid, which can be far wider than the
+   screen. Without this the toolbar follows it and the page scrolls sideways
+   before you have typed anything. */
+#content #form {
+	/* A wide result grid stretches <body> beyond the window (body.clientWidth
+	   was 2259px against a 1920px viewport on cashflow_transaction), and every
+	   block inside inherits that width - which is what made the search box
+	   absurdly long and pushed the toolbar off-screen. Cap the toolbar against
+	   the VIEWPORT, not the stretched body. 100vw alone is not enough: #content
+	   sits after the sidebar, so the sidebar's width has to come off too. */
+	--toolbar-inset: 320px;          /* #menu (~274px) + gutters, mirrors default.css */
+	max-width: calc(100vw - var(--toolbar-inset));
+	box-sizing: border-box;
+}
+
+/* Below Adminer's 800px breakpoint the sidebar is no longer beside #content. */
+@media all and (max-width: 800px) {
+	#content #form {
+		--toolbar-inset: 2.5rem;
+	}
+}
+
+#content #form > fieldset {
+	max-width: 100%;
+	min-width: 0;
+	box-sizing: border-box;
+}
+
+/* Search may take the slack, but only up to a sane reading width. */
+#content #form > fieldset:has(> legend > a[href*="#fieldset-search"]) {
+	flex: 0 1 auto;
+	/* Wide enough for column select + operator + a full 44ch value on one line,
+	   so the common case does not wrap; still capped so it cannot chase the
+	   stretched body width. */
+	max-width: min(96ch, 100%);
+}
+
+#content #form #fieldset-search select[name$="[col]"] {
+	flex: 0 0 auto;
+	/* 11em, not 14em: long column names are already handled by the searchable
+	   dropdown portal (which sizes itself), so the closed trigger does not need
+	   to fit the longest name - and those 3em were part of what pushed the
+	   toolbar onto a second line. */
+	max-width: 11em;
+}
+
+#content #form #fieldset-search select[name$="[op]"] {
+	flex: 0 0 auto;
+	max-width: 7.5em;           /* longest operator is "IS NOT NULL" */
+}
+
+/* --- E6: icon glyphs on the compact fieldsets ---------------------------
+   Drawn with mask + `background: currentColor` rather than a filled data-URI,
+   so each icon re-colours itself with the theme (all 11 dark palettes plus
+   light) instead of being baked to one colour. */
+#content #form > fieldset > legend::before {
+	content: "";
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+	margin-right: 5px;
+	vertical-align: -2px;
+	background: currentColor;
+	-webkit-mask: var(--icon) center / 12px 12px no-repeat;
+	mask: var(--icon) center / 12px 12px no-repeat;
+}
+
+/* no icon on the three collapsible fieldsets — their labels are already clear */
+#content #form > fieldset:has(> legend > a.toggle) > legend::before {
+	display: none;
+}
+
+/* Limit — stacked rows */
+#content #form > fieldset:has(input[name="limit"]) > legend {
+	--icon: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h9"/></svg>');
+}
+
+/* Text length — horizontal extent */
+#content #form > fieldset:has(input[name="text_length"]) > legend {
+	--icon: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/></svg>');
+}
+
+/* Action — run */
+#content #form > fieldset:has(#select-reset) > legend {
+	--icon: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="black"><path d="M6 3.5v17l14-8.5z"/></svg>');
+}
+
+/* Numeric inputs only ever hold 3–4 digits — stop them eating Search's room. */
+#content #form input.size[name="limit"],
+#content #form input.size[name="text_length"] {
+	width: 5.5ch;
+	min-width: 0;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+/* --- E5: column data type under the column name ------------------------
+   Adminer already carries the declared type in the header span's `title`
+   (e.g. <span title="numeric(18,4)">lineAmount</span>) — it was only
+   reachable by hovering. attr() surfaces it permanently, no JS needed. */
+#table thead th a > span[title] {
+	display: inline-block;
+}
+
+#table thead th a > span[title]::after {
+	content: attr(title);
+	display: block;
+	margin-top: 1px;
+	font: 400 10px / 1.2 var(--mono-stack);
+	font-weight: 400;
+	letter-spacing: 0;
+	text-transform: none;
+	color: var(--muted);
+	white-space: nowrap;
+}
+
+
+/* --- Action buttons: inline Lucide SVG, colour driven by currentColor -----
+   The glyph is a real child <svg stroke="currentColor"> injected by
+   select-toolbar-icons.php, NOT a background-image data URI. A data URI cannot
+   read currentColor, so any colour baked into it is frozen: it stops
+   contrasting as soon as the palette changes and cannot react to :hover or
+   :disabled. Inheriting `color` fixes all three at once. */
+
+#content #form [data-tb-icon] {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 7px;
+	width: auto;
+	height: auto;
+	min-height: 30px;
+	padding: 6px 12px;
+	flex: 0 0 auto;
+	border: 1px solid transparent;
+	border-radius: var(--radius-sm);
+	font-size: 12.5px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+#content #form [data-tb-icon] .tb-ico {
+	width: 15px;
+	height: 15px;
+	flex: 0 0 auto;
+	stroke: currentColor;          /* <- the whole point */
+	fill: none;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	pointer-events: none;
+}
+
+/* Primary: Select */
+#content #form [data-tb-icon="run"] {
+	background-color: var(--accent);
+	border-color: var(--accent);
+	color: var(--accent-fg);
+}
+
+#content #form [data-tb-icon="run"]:hover,
+#content #form [data-tb-icon="run"]:focus-visible {
+	background-color: var(--accent-hover);
+	border-color: var(--accent-hover);
+	color: var(--accent-fg);
+}
+
+/* Secondary: Reset — ghost, and it must stay legible on every palette */
+#content #form [data-tb-icon="reset"] {
+	background-color: transparent;
+	border-color: var(--border);
+	color: var(--fg);
+}
+
+#content #form [data-tb-icon="reset"]:hover:not(:disabled),
+#content #form [data-tb-icon="reset"]:focus-visible:not(:disabled) {
+	background-color: color-mix(in srgb, var(--accent) 16%, transparent);
+	border-color: var(--accent);
+	color: var(--accent);           /* icon follows, because it is currentColor */
+}
+
+#content #form [data-tb-icon="reset"]:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+	background-color: transparent;
+	border-color: var(--border);
+	color: var(--muted);
+}
+
+/* Sit the two buttons together as one control group. */
+#content #form > fieldset:has(#select-reset) > div {
+	gap: 6px;
+	align-items: center;
+}
+
+
+/* ==========================================================================
+   TOOLBAR DENSITY — keep it on ONE line, and stop unused controls hoarding
+   space. Wrapping to a second row is allowed only as a last resort.
+   ========================================================================== */
+
+/* Tighter chrome on every fieldset: the old 10px/12px padding alone cost
+   ~60px across the row, which was most of what pushed Action onto line 2. */
+#content #form > fieldset {
+	padding: 4px 8px 6px;
+}
+
+#content #form {
+	gap: 6px;
+	margin-top: 8px;            /* clear the Select data / Show structure links */
+	row-gap: 6px;
+}
+
+/* An unused Select-column / function / Sort select collapses to a stub.
+   `option:checked[value=""]` is true only while the selected option is the
+   empty placeholder, so the control expands back to normal the moment you
+   choose something — no JS, no state to keep in sync.
+   Deliberately scoped to #fieldset-select and #fieldset-sort: the Search
+   column select also defaults to an empty value, but it renders the visible
+   text "(anywhere)" and shrinking that would clip a real label. */
+#content #form #fieldset-select select:has(option:checked[value=""]),
+#content #form #fieldset-select select:has(option:checked:not([value])),
+#content #form #fieldset-sort select:has(option:checked[value=""]),
+#content #form #fieldset-sort select:has(option:checked:not([value])) {
+	width: 5.5ch;
+	min-width: 0;
+	padding-right: 2px;
+	color: var(--muted);
+}
+
+/* Same idea for the empty extra Sort rows Adminer keeps appending. */
+#content #form #fieldset-sort > div:has(select:has(option:checked[value=""])) label,
+#content #form #fieldset-sort > div:has(select:has(option:checked:not([value]))) label {
+	color: var(--muted);
+}
+
+/* Limit / Text length were already narrow; drop their legend to icon-width so
+   the label stops being the widest thing in the box. */
+#content #form > fieldset:has(input[name="limit"]) > legend,
+#content #form > fieldset:has(input[name="text_length"]) > legend {
+	font-size: 0.72em;
+}
+
+/* The no-index warning is a badge, not a paragraph — keep it from stretching
+   the Action box. */
+#content #form #noindex {
+	max-width: 1.6em;
+	overflow: hidden;
+	padding: 2px 6px;
+}
+
+
+/* ==========================================================================
+   LOGIN PAGE
+   Gated entirely on `body:has(#username)` — #username exists only on the login
+   form — so this is CSS-only: no PHP, no new markup. That is deliberate,
+   because default-pgsql.php (loginFormField), brand-name.php (name) and
+   login-ip.php all sit on this path and must stay untouched.
+
+   Laid out after the reference screenshot: brand above the card, one calm
+   card, fields two-up with the label above the input, one full-width primary
+   button. Flat rather than the isometric-plinth idea from SPEC.md R2.4 —
+   the reference is flat, and the flat version survives 12 palettes better.
+   ========================================================================== */
+
+body:has(#username) {
+	display: grid;
+	grid-template-rows: auto auto;
+	align-content: center;
+	justify-items: center;
+	gap: 22px;
+	min-height: 100vh;
+	padding: 32px 20px;
+	box-sizing: border-box;
+	background:
+		radial-gradient(70% 55% at 50% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%),
+		var(--bg);
+}
+
+/* Adminer prints the brand inside #foot, i.e. after the form. Pull it above. */
+body:has(#username) #foot {
+	order: -1;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: none;
+}
+
+body:has(#username) #menu {
+	position: static;
+	inset: auto;
+	width: auto;
+	max-width: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	background: none;
+	border: 0;
+	box-shadow: none;
+	overflow: visible;
+}
+
+body:has(#username) #menu h1 {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: none;
+	font-size: 22px;
+	font-weight: 650;
+	letter-spacing: -0.01em;
+	color: var(--fg);
+}
+
+/* logo + name + version sit on ONE horizontal line */
+body:has(#username) #menu h1 > a {
+	display: inline-flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 10px;
+	color: inherit;
+	text-decoration: none;
+}
+
+body:has(#username) #menu h1 {
+	flex-direction: row;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-items: center;
+	gap: 8px;
+}
+
+/* the subtitle is the only thing that drops to its own line */
+body:has(#username) #menu h1::after {
+	flex-basis: 100%;
+	text-align: center;
+}
+
+/* the logo becomes an app tile */
+body:has(#username) #logo {
+	width: 30px;
+	height: 30px;
+	padding: 9px;
+	box-sizing: content-box;
+	border-radius: 14px;
+	background: color-mix(in srgb, var(--accent) 18%, var(--dim));
+	box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+body:has(#username) #menu h1::after {
+	content: "Connect to your database";
+	font-size: 12.5px;
+	font-weight: 400;
+	color: var(--muted);
+}
+
+body:has(#username) .version {
+	font-size: 11px;
+	font-weight: 400;
+	color: var(--muted);
+}
+
+/* ---- the card ---------------------------------------------------------- */
+
+body:has(#username) #content {
+	width: min(440px, 100%);
+	box-sizing: border-box;
+	margin: 0;
+	padding: 24px 24px 22px;
+	background: var(--dim);
+	border: 1px solid var(--border);
+	border-radius: 14px;
+	box-shadow: 0 1px 2px color-mix(in srgb, #000 12%, transparent),
+	            0 18px 40px -24px color-mix(in srgb, #000 55%, transparent);
+}
+
+body:has(#username) #content h2 {
+	margin: 0 0 16px;
+	padding: 0;
+	border: 0;
+	background: none;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--muted);
+}
+
+body:has(#username) #menuopen,
+body:has(#username) #ajaxstatus:empty {
+	display: none;
+}
+
+/* ---- fields: two per row, label above input --------------------------- */
+
+body:has(#username) table.layout {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 12px 14px;
+	width: 100%;
+	margin: 0;
+	border: 0;
+	background: none;
+}
+
+body:has(#username) table.layout tbody {
+	display: contents;
+}
+
+body:has(#username) table.layout tr {
+	display: block;
+	min-width: 0;
+	border: 0;
+	background: none;
+}
+
+/* Database is the odd one out — let it span the full width. */
+body:has(#username) table.layout tr:last-child {
+	grid-column: 1 / -1;
+}
+
+body:has(#username) table.layout th,
+body:has(#username) table.layout td {
+	display: block;
+	width: auto;
+	padding: 0;
+	border: 0;
+	background: none;
+	text-align: left;
+	white-space: normal;
+}
+
+body:has(#username) table.layout th {
+	margin-bottom: 5px;
+	font: 500 11px/1.3 var(--mono-stack);
+	color: var(--muted);
+}
+
+body:has(#username) table.layout input:not([type="checkbox"]),
+body:has(#username) table.layout select {
+	width: 100%;
+	box-sizing: border-box;
+	/* explicit height: a <select> and an <input> resolve default padding
+	   differently, so identical padding still left the driver box 2px taller
+	   than the text fields sitting next to it. */
+	height: 36px;
+	padding: 0 10px;
+	font-size: 13px;
+	line-height: normal;
+}
+
+/* ---- submit + permanent login ----------------------------------------- */
+
+body:has(#username) #content p {
+	margin: 18px 0 0;
+}
+
+/* auth-buttons.php turns this into a <button> so it can hold an inline,
+   theme-following icon - match both so styling survives either form. */
+body:has(#username) #content p input[type="submit"],
+body:has(#username) #content p button[type="submit"] {
+	width: 100%;
+	padding: 10px 12px;
+	font-size: 13.5px;
+	font-weight: 600;
+	border-radius: var(--radius);
+}
+
+body:has(#username) #content p label {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 14px;
+	font-size: 12px;
+	color: var(--muted);
+}
+
+body:has(#username) #content p label input {
+	margin: 0;
+}
+
+body:has(#username) .error,
+body:has(#username) .message {
+	margin: 0 0 14px;
+	border-radius: var(--radius-sm);
+}
+
+/* ---- language picker sits under the brand ----------------------------- */
+
+body:has(#username) #lang {
+	position: static;
+	padding: 0;
+	font-size: 12px;
+	color: var(--muted);
+}
+
+body:has(#username) #lang select {
+	width: auto;
+	padding: 3px 6px;
+}
+
+body:has(#username) #menu form {
+	margin: 0;
+	border: 0;
+}
+
+/* Table-border controls are meaningless with no table on screen. */
+body:has(#username) #adminer-table-border-style,
+body:has(#username) #adminer-table-border-color {
+	display: none;
+}
+
+@media all and (max-width: 520px) {
+	body:has(#username) table.layout {
+		grid-template-columns: 1fr;
+	}
+	body:has(#username) table.layout tr:last-child {
+		grid-column: auto;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	body:has(#username) * {
+		transition: none !important;
+		animation: none !important;
+	}
+}
+
+
+/* ==========================================================================
+   FORM CONTROL CONSISTENCY + ICON-AND-TEXT BUTTONS  (round 7)
+   ========================================================================== */
+
+/* --- autofill was the real inconsistency -------------------------------
+   Chrome paints its own background and text colour on autofilled fields, which
+   is why Server/Database looked lighter than Username/Password on the login
+   card even though all four share one rule. Repaint them with an inset shadow
+   (the only way to beat the UA style) so every field matches. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+select:-webkit-autofill,
+textarea:-webkit-autofill {
+	-webkit-text-fill-color: var(--fg);
+	-webkit-box-shadow: 0 0 0 1000px var(--bg) inset;
+	box-shadow: 0 0 0 1000px var(--bg) inset;
+	caret-color: var(--fg);
+	border-radius: var(--radius);
+	transition: background-color 9999s ease-out 0s;   /* stop the yellow flash */
+}
+
+/* One shape for every control: same radius, same height, same background. */
+input:not([type]),
+input[type="text"],
+input[type="search"],
+input[type="number"],
+input[type="password"],
+input[type="email"],
+input[type="url"],
+input[type="date"],
+input[type="datetime-local"],
+select,
+textarea {
+	border-radius: var(--radius);
+	background-color: var(--bg);
+	color: var(--fg);
+}
+
+/* Logout / Login icons now come from auth-buttons.php as inline
+   <svg stroke="currentColor">, so the glyph is always the same colour as the
+   label. They used to be background-image data URIs with stroke="white" baked
+   in, which on a dark --accent-fg palette put a white icon next to dark text
+   on the same button. A data URI cannot read currentColor - that is why this
+   moved to real inline SVG rather than being patched here. */
+
+/* --- reclaim the dead space beside Limit / Text length -----------------
+   The legend ("Text length") is wider than the 5.5ch input, so the fieldset
+   was sized by the label and left an empty gap next to the field. Let the
+   input fill whatever width the legend already forced. */
+#content #form > fieldset:has(input[name="limit"]) > div,
+#content #form > fieldset:has(input[name="text_length"]) > div {
+	display: flex;
+}
+
+#content #form input.size[name="limit"],
+#content #form input.size[name="text_length"] {
+	flex: 1 1 auto;
+	width: auto;
+	min-width: 4ch;
+}
+
+/* --- login card: saved-connection line ---------------------------------
+   Adminer lists previously used logins here; unstyled it floated between the
+   language picker and the card looking like stray text. */
+body:has(#username) #logins {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: none;
+	font-size: 12px;
+	text-align: center;
+	list-style: none;
+}
+
+body:has(#username) #logins a {
+	display: inline-block;
+	padding: 5px 12px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: var(--dim);
+	color: var(--fg);
+	text-decoration: none;
+	font-size: 12px;
+}
+
+body:has(#username) #logins a:hover {
+	border-color: var(--accent);
+	color: var(--accent);
+}
+
+
+/* ==========================================================================
+   NATIVE <select> — modern, themed, and the caret follows the palette
+   ==========================================================================
+   The operator dropdown and friends were still rendering with the OS default
+   look (white list, blue highlight) because `appearance` was untouched.
+
+   The caret is drawn with two linear-gradients rather than an SVG data URI on
+   purpose: a data URI cannot read CSS variables or currentColor, so any arrow
+   colour baked into one is frozen and stops matching once the palette changes
+   - the same trap that froze the button icons. Gradient colour stops DO accept
+   var(), so this arrow re-colours itself per theme for free. */
+
+select {
+	appearance: none;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	padding-right: 26px;
+	border-radius: var(--radius);
+	background-color: var(--bg);
+	color: var(--fg);
+	background-image:
+		linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+		linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+	background-position:
+		calc(100% - 15px) calc(50% + 1px),
+		calc(100% - 11px) calc(50% + 1px);
+	background-size: 5px 5px, 5px 5px;
+	background-repeat: no-repeat;
+	cursor: pointer;
+}
+
+select:hover {
+	border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+}
+
+select:hover,
+select:focus {
+	background-image:
+		linear-gradient(45deg, transparent 50%, var(--accent) 50%),
+		linear-gradient(135deg, var(--accent) 50%, transparent 50%);
+}
+
+select:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* The popup list itself. Chrome on Linux/Windows honours these on <option>,
+   which is what removes the white-list / blue-highlight OS look. */
+select option {
+	background-color: var(--bg);
+	color: var(--fg);
+}
+
+select option:checked {
+	background-color: color-mix(in srgb, var(--accent) 30%, var(--bg));
+	color: var(--fg);
+}
+
+select optgroup {
+	background-color: var(--dim);
+	color: var(--muted);
+}
+
+/* A multi-line <select size> is a list, not a dropdown — drop the caret so it
+   does not paint an arrow over the last row. */
+select[multiple],
+select[size]:not([size="1"]) {
+	background-image: none;
+	padding-right: 8px;
+	cursor: default;
+}
+
+/* The collapsed stubs in Select / Sort are intentionally arrow-only; keep the
+   caret centred in them instead of hanging off a 41px box. */
+#content #form #fieldset-select select:has(option:checked[value=""]),
+#content #form #fieldset-select select:has(option:checked:not([value])),
+#content #form #fieldset-sort select:has(option:checked[value=""]),
+#content #form #fieldset-sort select:has(option:checked:not([value])) {
+	padding-right: 18px;
+	background-position:
+		calc(100% - 11px) calc(50% + 1px),
+		calc(100% - 7px) calc(50% + 1px);
 }

@@ -281,7 +281,9 @@ final class AdminerSelectShortcuts extends Adminer\Plugin {
 		if (!actionFs) {
 			return;
 		}
-		const selectBtn = actionFs.querySelector('input[type="submit"]');
+		// select-toolbar-icons.php may have already swapped this <input> for a
+		// <button> so it can carry an inline (themeable) icon, so accept either.
+		const selectBtn = actionFs.querySelector('input[type="submit"], button[type="submit"]');
 		if (!selectBtn) {
 			return;
 		}
