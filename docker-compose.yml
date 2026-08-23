@@ -3,11 +3,32 @@ services:
     build:
       context: ./adminer
       dockerfile: Dockerfile
-    image: cloudbeaver-adminer:6.0.1-mongodb
+    image: adminer-custom:6.0.1-mongodb
     container_name: adminer
     restart: unless-stopped
     network_mode: host
-    command: ["php", "-S", "[::]:6868", "-t", "/var/www/html"]
+    # Sessions hold Adminer's connection registry ($_SESSION["pwds"]), which is
+    # what the connection switcher lists. PHP's defaults put them in /tmp and
+    # expire them after 1440s of inactivity, so the list emptied itself after
+    # ~24 idle minutes and on every container restart. Pin them to the volume
+    # and match the 30 days Adminer already uses for its own cookies.
+    #
+    # session.cookie_lifetime is deliberately NOT set here: Adminer calls
+    # session_set_cookie_params(['lifetime' => 0]) itself, so adminer_sid is
+    # always a browser-session cookie and the ini setting is dead weight.
+    # Closing the browser therefore still drops the session - the
+    # `adminer_permanent` cookie (30 days) is what carries connections across
+    # that, which is why login-permanent.php has to exist.
+    command:
+      - php
+      - -d
+      - session.save_path=/sessions
+      - -d
+      - session.gc_maxlifetime=2592000
+      - -S
+      - "[::]:6868"
+      - -t
+      - /var/www/html
     volumes:
       - ./adminer/adminer.css:/var/www/html/adminer.css:ro
       - ./adminer/adminer-dark.css:/var/www/html/adminer-dark.css:ro
@@ -37,9 +58,17 @@ services:
       - ./adminer/plugins-enabled/select-sort-dir.php:/var/www/html/plugins-enabled/select-sort-dir.php:ro
       - ./adminer/plugins-enabled/sidebar-collapse.php:/var/www/html/plugins-enabled/sidebar-collapse.php:ro
       - ./adminer/plugins-enabled/connection-switcher.php:/var/www/html/plugins-enabled/connection-switcher.php:ro
+      - ./adminer/plugins-enabled/login-permanent.php:/var/www/html/plugins-enabled/login-permanent.php:ro
+      - ./adminer/plugins-enabled/login-defaults.php:/var/www/html/plugins-enabled/login-defaults.php:ro
       # - ./adminer/plugins-enabled/resize-menu.php:/var/www/html/plugins-enabled/resize-menu.php:ro
+      - adminer-sessions:/sessions
     environment:
       TZ: Asia/Ho_Chi_Minh
+      # Encryption key for the "Permanent login" cookie. Set it in .env (which
+      # is gitignored) - NOT here. Unset means Adminer falls back to its
+      # ephemeral /tmp/adminer.key and remembered logins break on restart.
+      # See adminer/plugins-enabled/login-permanent.php for the security note.
+      ADMINER_PERMANENT_KEY: ${ADMINER_PERMANENT_KEY:-}
       ADMINER_DEFAULT_SERVER: localhost
       ADMINER_PLUGINS: >-
         dark-switcher
@@ -49,3 +78,6 @@ services:
         enum-option
         dump-json
         sql-log
+
+volumes:
+  adminer-sessions:

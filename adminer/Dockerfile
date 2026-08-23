@@ -26,4 +26,11 @@ RUN sed -i \
 	"s/function jushAutocomplete(array \$tables, ?array \$statements): string {/function jushAutocomplete(array \$tables, \$statements): string {/" \
 	plugins/drivers/redis.php
 
+# Session storage lives on a named volume so logins outlive the container.
+# Created here, while still root, because Docker seeds a fresh named volume from
+# the image's contents AND ownership at the mount point - mount an empty volume
+# on a path that does not exist in the image and it arrives root-owned 0755,
+# which uid 100 cannot write, and PHP silently stops persisting sessions.
+RUN mkdir -p /sessions && chown adminer:adminer /sessions
+
 USER adminer

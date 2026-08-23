@@ -1082,17 +1082,43 @@ textarea {
 	min-width: 4ch;
 }
 
+/* --- the username / Logout cluster (top right) -------------------------
+   default.css leaves this <p> as inline flow, so its spacing was whatever
+   whitespace happened to survive between nodes - and three plugins now prepend
+   controls into it (sidebar toggle, connection switcher), which made the run
+   read as one crowded blob. One flex row with an explicit gap instead, so any
+   future control is spaced by the container rather than by luck. The hidden
+   token <input> is display:none per the UA sheet and costs no gap. */
+#foot p.logout {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
 /* --- login card: saved-connection line ---------------------------------
    Adminer lists previously used logins here; unstyled it floated between the
-   language picker and the card looking like stray text. */
+   language picker and the card looking like stray text.
+
+   A column of flex rows, not text-align:center: each <li> now carries a rename
+   and a delete control next to the link (connection-switcher.php), so the row
+   needs to be a layout box that can space them. */
 body:has(#username) #logins {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
 	margin: 0;
-	padding: 0;
+	padding: 6px 0 14px;
 	border: 0;
 	background: none;
 	font-size: 12px;
-	text-align: center;
 	list-style: none;
+}
+
+body:has(#username) #logins li {
+	display: flex;
+	align-items: center;
+	gap: 6px;
 }
 
 body:has(#username) #logins a {
