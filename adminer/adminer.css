@@ -1196,3 +1196,137 @@ select[size]:not([size="1"]) {
 		calc(100% - 11px) calc(50% + 1px),
 		calc(100% - 7px) calc(50% + 1px);
 }
+
+
+/* ==========================================================================
+   TOOLBAR CONTROL HEIGHT  (round 13)
+   Trade the fieldset's outer padding for control height, and round the corners
+   a little more. Two hard constraints from the request:
+
+     - height comes from HEIGHT, never from font-size. Raising the font is what
+       made a 36-char uuid overflow its box earlier, so every font-size here is
+       left exactly as it was.
+     - the toolbar's TOTAL height must not grow, or the result grid gets pushed
+       down the page. The extra control height is therefore paid for out of the
+       fieldset padding and the search row-gap, not added on top.
+   ========================================================================== */
+
+#content #form > fieldset {
+	/* was 4px 8px 6px - 10px of vertical padding that showed as dead space
+	   around short controls. Most of it now lives inside the controls. */
+	padding: 0 8px 2px;
+}
+
+#content #form > fieldset > legend {
+	/* keep the legend tight so it does not re-add what the padding gave back */
+	line-height: 1.1;
+}
+
+/* Search rows sit closer together, which helps pay for the taller rows. */
+#content #form #fieldset-search > div {
+	row-gap: 3px;
+}
+
+#content #form > fieldset > div[id^="fieldset-"] {
+	margin-top: 3px;
+}
+
+/* --- one height for every control in the toolbar ----------------------- */
+#content #form select,
+#content #form input[type="search"],
+#content #form input[type="number"],
+#content #form input[type="text"],
+#content #form input:not([type]),
+#content #form input.size {
+	height: 31px;
+	box-sizing: border-box;
+	padding-top: 0;
+	padding-bottom: 0;
+	line-height: normal;
+	/* a touch rounder than the shared 5px token - these are the controls the
+	   eye lands on, and 7px reads modern without going pill-shaped */
+	border-radius: 7px;
+}
+
+/* selects keep room for the caret on the right */
+#content #form select {
+	padding-right: 26px;
+}
+
+#content #form #fieldset-select select:has(option:checked[value=""]),
+#content #form #fieldset-select select:has(option:checked:not([value])),
+#content #form #fieldset-sort select:has(option:checked[value=""]),
+#content #form #fieldset-sort select:has(option:checked:not([value])) {
+	padding-right: 18px;
+}
+
+/* buttons match the fields so the row has one baseline */
+#content #form [data-tb-icon],
+#content #form .sd-toggle {
+	height: 31px;
+	min-height: 31px;
+	box-sizing: border-box;
+	border-radius: 7px;
+}
+
+/* The native popup list cannot be rounded from CSS (the UA draws it), so the
+   rounding above applies to the closed control only - noted so nobody
+   re-attempts it and assumes it is broken. */
+
+/* Limit / Text length carry their own more-specific sizing rule earlier in
+   this file (box-sizing: content-box + 4px vertical padding, chosen back when
+   the number spinners were clipping digits). That padding sat OUTSIDE the
+   31px height, making these two boxes 41px while every neighbour was 31px.
+   Re-state at matching specificity: same horizontal padding, height now
+   inclusive. Width still comes from the flex rule above, not from `width`. */
+#content #form input.size[name="limit"],
+#content #form input.size[name="text_length"] {
+	box-sizing: border-box;
+	height: 31px;
+	padding: 0 6px;
+}
+
+
+/* ==========================================================================
+   TOOLBAR ALIGNMENT  (round 13b)
+   Every fieldset the same height, every control on the same baseline.
+
+   Measured before this block, with nothing filtered at all:
+     fieldset heights  54 / 50 / 47 px   (ragged bottoms: 201 / 198 / 194)
+     control tops      163 / 162 / 160   (three different baselines)
+
+   Two separate causes, both of them mine:
+     1. Limit / Text length carry their own `padding: 2px 6px 4px` rule (from
+        when number spinners were clipping digits) instead of the shared
+        `0 8px 2px`, and their inner div zeroes the margin - so those two boxes
+        were 4px shorter and their inputs 1px higher.
+     2. The top margin was applied to `div[id^="fieldset-"]`, which only exists
+        on Select / Search / Sort. Limit, Text length and Action have a plain
+        <div>, so they never got it and sat 3px higher.
+   ========================================================================== */
+
+/* Equal box heights: without stretch the boxes are sized by their own content
+   and top-aligned, so their bottoms end wherever they end. */
+#content #form {
+	align-items: stretch;
+}
+
+/* One padding for EVERY fieldset - restated with the same selector the
+   Limit/Text-length rule uses, so it actually wins. */
+#content #form > fieldset,
+#content #form > fieldset:has(> div > input.size):not(:has(select)) {
+	padding: 0 8px 2px;
+}
+
+/* One inner offset for EVERY fieldset, whether or not its div carries an id. */
+#content #form > fieldset > div,
+#content #form > fieldset > div[id^="fieldset-"],
+#content #form > fieldset:has(> div > input.size):not(:has(select)) > div {
+	margin-top: 3px;
+	margin-bottom: 0;
+}
+
+/* Keep the Limit/Text-length row from re-introducing a gap of its own. */
+#content #form > fieldset:has(> div > input.size):not(:has(select)) > div {
+	gap: 0;
+}

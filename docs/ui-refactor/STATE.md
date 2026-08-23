@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-08-22
 **Phase:** planning complete; **priority switched to bug fixes** (see `DIAGNOSIS.md`)
-**Next action:** D1–D5, E0–E9 and F1–F5 all fixed and verified (fix logs at the end of `DIAGNOSIS.md`). Auto-apply is **commit-only**. Toolbar is down to one row (1481px -> 1137px). Open: confirm Enter-in-search by hand; decide whether the grid should scroll in its own container (would end horizontal page scroll on wide tables); confirm the Action icon styling is acceptable. **Login redesign DONE** (round 6, flat/reference style). Dock refactor still paused. Rounds 7-10 covered login polish, Lucide icons, dynamic icon colour, enum values on structure, JSON pretty-print in the inline editor, and matching auth-button icons.
+**Next action:** D1–D5, E0–E9 and F1–F5 all fixed and verified (fix logs at the end of `DIAGNOSIS.md`). Auto-apply is **commit-only**. Toolbar is down to one row (1481px -> 1137px). Open: confirm Enter-in-search by hand; decide whether the grid should scroll in its own container (would end horizontal page scroll on wide tables); confirm the Action icon styling is acceptable. **Login redesign DONE** (round 6, flat/reference style). Dock refactor still paused. Round 13 unified toolbar control height at 31px with 7px radius, paid for out of fieldset padding (grid moved up 8px, fonts untouched). Round 12 added text-length persistence, sort-direction buttons synced to column headers, a Ctrl+B collapsible sidebar, and a zero-query connection switcher. Rounds 7-10 covered login polish, Lucide icons, dynamic icon colour, enum values on structure, JSON pretty-print in the inline editor, and matching auth-button icons.
 
 ---
 

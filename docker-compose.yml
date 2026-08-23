@@ -34,6 +34,9 @@ services:
       - ./adminer/plugins-enabled/structure-enum.php:/var/www/html/plugins-enabled/structure-enum.php:ro
       - ./adminer/plugins-enabled/select-json-edit.php:/var/www/html/plugins-enabled/select-json-edit.php:ro
       - ./adminer/plugins-enabled/auth-buttons.php:/var/www/html/plugins-enabled/auth-buttons.php:ro
+      - ./adminer/plugins-enabled/select-sort-dir.php:/var/www/html/plugins-enabled/select-sort-dir.php:ro
+      - ./adminer/plugins-enabled/sidebar-collapse.php:/var/www/html/plugins-enabled/sidebar-collapse.php:ro
+      - ./adminer/plugins-enabled/connection-switcher.php:/var/www/html/plugins-enabled/connection-switcher.php:ro
       # - ./adminer/plugins-enabled/resize-menu.php:/var/www/html/plugins-enabled/resize-menu.php:ro
     environment:
       TZ: Asia/Ho_Chi_Minh

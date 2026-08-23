@@ -801,3 +801,161 @@ Radii are internally consistent per context — every toolbar control 5px, every
 ## Sweep
 
 Zero PHP errors on login / db list / select / structure / edit / SQL; zero console errors.
+
+---
+
+# Round 12 — sort direction, sidebar collapse, connection switcher (2026-08-22)
+
+| id | item | status |
+|---|---|---|
+| **O1** | Text length persists like Limit | **DONE, verified** |
+| **O2** | Sort direction as an icon button; checkbox removed from view | **DONE, verified** |
+| **O3** | Same direction icon mirrored on the column header | **DONE, verified** |
+| **O4** | Sidebar collapsible, Ctrl+B | **DONE, verified** |
+| **O5** | In-page connection switcher | **DONE, verified** |
+
+## O1
+
+`select-limit-persist.php` gained `selectLengthProcess()` / `selectLengthPrint()` mirroring the
+Limit pair, plus a `adminer_select_text_length` cookie. `data-default` carries the *saved* value, not
+a hardcoded 100, which is what stops Adminer putting `text_length` in the URL once it matches your
+preference. `selectLengthPrint()` returns true so core does not print a second fieldset — verified
+exactly one `name='text_length'` in the page.
+
+Verified: set 250, opened a **different table**, still 250, with no `text_length` in the URL. The
+cookie is HttpOnly (Adminer\cookie), so it is invisible to JS — the value surviving is the proof.
+
+## O2 / O3
+
+New `select-sort-dir.php`. The `desc[n]` checkbox is hidden but **left in the DOM**: a
+`display:none` input is still submitted (only `disabled` removes it), so `desc[0]=1` reaches Adminer
+byte-identically and nothing server-side changed. The button toggles `.checked` and fires `change`,
+which is also what makes `select-autoapply.php` commit the new sort.
+
+Glyphs are the supplied Lucide `arrow-up-narrow-wide` / `arrow-down-wide-narrow`, inline with
+`stroke: currentColor` so they follow theme and hover — not baked data URIs.
+
+Header sync is derived from the sort fieldset, so it cannot disagree with the controls. Adminer marks
+the sorted column with no class of its own, which is why this had to be added. Multiple sort columns
+get a small position number.
+
+Verified end to end: button read `desc` / `aria-pressed=true`, header said "Sorted descending";
+clicking flipped it, auto-applied to `order[0]=occurred_at` with `desc` gone, SQL became
+`ORDER BY "occurred_at"`, button read `asc`, header said "Sorted ascending".
+
+## O4
+
+New `sidebar-collapse.php`. Cookie `adminer_sidebar`, applied to `<html>` in `head()` **before
+paint** (same approach as theme-switcher) so there is no flash of the wrong layout on every load.
+
+It also has to move `--toolbar-inset`: that variable exists because the Select toolbar is capped
+against the viewport *minus the sidebar*, so with the sidebar gone the cap must widen or the toolbar
+keeps a dead 300px gap. Verified: margin-left 302.4px → 16px, menu hidden, inset → 3rem, toolbar
+right edge 1685 inside a 1717 viewport, and the state survived navigation.
+
+Ctrl+B is ignored while focus is in an input/textarea/select or contenteditable, so it cannot fight
+typing. Adminer's own mobile hamburger is untouched.
+
+## O5
+
+New `connection-switcher.php`. **Zero server work and zero queries** — that was the explicit
+performance constraint. It records the connection you are already on into
+`localStorage["adminer_connections"]` (driver, server, username, db, ns, ts — **never a password**,
+capped at 8) and renders that history as links. The menu is built on open, not on page load.
+
+Placement is also a performance decision: it goes into the username/Logout cluster in `#foot`, which
+sits outside `#content`, so inserting it cannot reflow the result grid. The sidebar table list or a
+spot above the toolbar both would.
+
+Verified: two databases visited → both listed, current one marked `aria-current`, no `password` key
+in storage; clicking the other entry landed on it **without re-login**, table list intact.
+
+## Sweep
+
+Zero PHP errors on login / db list / select / sorted select / structure / edit / SQL; zero console
+errors; exactly one Text length fieldset.
+
+---
+
+# Round 13 — control height and radius (2026-08-22)
+
+| id | item | status |
+|---|---|---|
+| **P1** | more border-radius on the default form controls (operator / function / aggregation) | **DONE** 5px → 7px |
+| **P2** | controls too short while the surrounding padding was wasted — trade one for the other | **DONE, verified** |
+| **P3** | height must come from HEIGHT, not font-size; total toolbar height must not grow | **DONE, verified** |
+
+## Measured before / after
+
+| | before | after |
+|---|---|---|
+| control heights | 25 / 26 / 27 / 30 px (four different) | **31px, all of them** |
+| radius | 5px | **7px** |
+| font sizes | 13.33 / 13.25 / 11.5 / 12.5 | **identical — untouched** |
+| fieldset padding | `4px 8px 6px` | `0 8px 2px` |
+| search row-gap | 6px | 3px |
+| form height | 62px | **54px** |
+| grid top | 252px | **244px** |
+| uuid clipped | 0px | **0px** |
+
+P3 is why every font-size above is unchanged: raising the font is exactly what made a 36-char uuid
+overflow its box in round 3, so the extra height comes purely from `height` + `box-sizing:
+border-box`. Re-verified the uuid still measures 0px clipped.
+
+The total did not merely hold — the grid moved **up** 8px, because the padding that was removed was
+larger than the height that was added. Checked with two search rows as well (89px form, still one
+toolbar line, still inside the viewport).
+
+## The one thing that fought back
+
+`Limit` and `Text length` came out at **41px** while everything else was 31px. They carry their own
+earlier, more-specific rule (`input.size[name="limit"]`) that sets `box-sizing: content-box` plus
+`padding: 4px 6px` — chosen back when number spinners were clipping digits. With content-box that
+padding sits *outside* the height: 31 + 4 + 4 + borders = 41. Re-stated at matching specificity with
+`border-box` and `padding: 0 6px`; width still comes from the flex rule, not from `width`.
+
+## Not regressed
+
+The login card is untouched (36px controls, 6px radius) because these rules are scoped to
+`#content #form`. Sort button and header indicator still work. Zero PHP errors on login / db list /
+select / structure / edit / SQL; zero console errors.
+
+## Known limitation, recorded so it is not re-attempted
+
+The **open** native `<select>` popup list cannot be rounded or restyled from CSS — the UA draws that
+box. The 7px radius applies to the closed control; only `option` background/colour can be themed.
+
+## Round 13b — the boxes were not equal (2026-08-22)
+
+Reported with nothing filtered at all, and correct. Measured before:
+
+| | before | after |
+|---|---|---|
+| fieldset heights | **54 / 50 / 47** | **54 — all six** |
+| fieldset bottoms | 201 / 198 / 194 (ragged) | **201 — all six** |
+| control baselines (top) | **163 / 162 / 160** | **163 — all** |
+| control heights | 31 | 31 |
+| form height / grid top | 54 / 244 | 54 / 244 (unchanged) |
+
+Two causes, both introduced by me in 13a:
+
+1. **Limit / Text length keep their own padding rule.**
+   `#content #form > fieldset:has(> div > input.size):not(:has(select))` sets `padding: 2px 6px 4px`
+   instead of the shared `0 8px 2px`, and its `> div` zeroes the margin. That made those two boxes
+   4px shorter and their inputs 1px higher. The generic rule could not win because that selector is
+   more specific, so the fix restates it with the *same* selector.
+
+2. **The top margin only reached three of the six fieldsets.** It was written for
+   `div[id^="fieldset-"]`, which exists only on Select / Search / Sort. Limit, Text length and
+   Action have a plain `<div>` — no id, no margin, content 3px higher.
+
+Also added `align-items: stretch` on `#form`: without it the boxes are sized by their own content and
+top-aligned, so their bottoms end wherever they happen to end. With it they match the tallest —
+verified still equal (all 89px, bottoms 236) when Search grows to two rows, with the first-row
+baseline still a single value.
+
+Login card unaffected: these rules are scoped to `#content #form`, and the login form carries no
+`id="form"`.
+
+Sweep: zero PHP errors on login / db list / select / filtered select / structure / edit / SQL; zero
+console errors.
