@@ -60,8 +60,14 @@ services:
       - ./adminer/plugins-enabled/connection-switcher.php:/var/www/html/plugins-enabled/connection-switcher.php:ro
       - ./adminer/plugins-enabled/login-permanent.php:/var/www/html/plugins-enabled/login-permanent.php:ro
       - ./adminer/plugins-enabled/login-defaults.php:/var/www/html/plugins-enabled/login-defaults.php:ro
+      - ./adminer/plugins-enabled/dump-pgsql-fix.php:/var/www/html/plugins-enabled/dump-pgsql-fix.php:ro
       # - ./adminer/plugins-enabled/resize-menu.php:/var/www/html/plugins-enabled/resize-menu.php:ro
+      - ./adminer/plugins-enabled/pg-backup.php:/var/www/html/plugins-enabled/pg-backup.php:ro
+      - ./adminer/plugins-enabled/pg-drop-force.php:/var/www/html/plugins-enabled/pg-drop-force.php:ro
       - adminer-sessions:/sessions
+      # pg_dump output. A named volume, not a bind mount: these files are
+      # database contents, and the repo is a git working tree.
+      - adminer-backups:/backups
     environment:
       TZ: Asia/Ho_Chi_Minh
       # Encryption key for the "Permanent login" cookie. Set it in .env (which
@@ -81,3 +87,4 @@ services:
 
 volumes:
   adminer-sessions:
+  adminer-backups:
