@@ -64,6 +64,9 @@ services:
       # - ./adminer/plugins-enabled/resize-menu.php:/var/www/html/plugins-enabled/resize-menu.php:ro
       - ./adminer/plugins-enabled/pg-backup.php:/var/www/html/plugins-enabled/pg-backup.php:ro
       - ./adminer/plugins-enabled/pg-drop-force.php:/var/www/html/plugins-enabled/pg-drop-force.php:ro
+      - ./adminer/plugins-enabled/bool-friendly.php:/var/www/html/plugins-enabled/bool-friendly.php:ro
+      - ./adminer/plugins-enabled/select-inline-choice.php:/var/www/html/plugins-enabled/select-inline-choice.php:ro
+      - ./adminer/plugins-enabled/select-edit-highlight.php:/var/www/html/plugins-enabled/select-edit-highlight.php:ro
       - adminer-sessions:/sessions
       # pg_dump output. A named volume, not a bind mount: these files are
       # database contents, and the repo is a git working tree.
