@@ -38,6 +38,15 @@ html[data-sidebar="collapsed"] #menu {
 html[data-sidebar="collapsed"] #content {
 	margin-left: 16px !important;
 }
+/* #breadcrumb is position:absolute with a hard-coded `left:21em` - the sidebar
+   width - so #content's margin never reaches it and it was left stranded with
+   the old gap to its left. 34px because the element also carries
+   `margin:0 0 0 -18px`, so 34 - 18 lands on the same 16px as #content.
+   Adminer does the same thing at its own mobile breakpoint
+   (`#breadcrumb{left:48px !important}`), just with room for the hamburger. */
+html[data-sidebar="collapsed"] #breadcrumb {
+	left: 34px !important;
+}
 /* The toolbar cap is measured from the viewport minus the sidebar, so it has
    to be told the sidebar is gone. */
 html[data-sidebar="collapsed"] #content #form {

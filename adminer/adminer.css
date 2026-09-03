@@ -215,6 +215,11 @@ table, td, th, .column {
 .js #table.checkable tbody tr.row-active > td,
 .js #table.checkable tbody tr.row-active > th {
 	background: color-mix(in srgb, var(--accent, #3574f0) 22%, var(--bg, #fff));
+}
+/* One accent bar at the very left of the active row, not one per cell: the
+   inset shadow belongs on the first cell only, otherwise every cell shows its
+   own left stripe. */
+.js #table.checkable tbody tr.row-active > :first-child {
 	box-shadow: inset 3px 0 0 var(--accent, #3574f0);
 }
 
@@ -1355,4 +1360,49 @@ select[size]:not([size="1"]) {
 /* Keep the Limit/Text-length row from re-introducing a gap of its own. */
 #content #form > fieldset:has(> div > input.size):not(:has(select)) > div {
 	gap: 0;
+}
+
+/* ── FOOTER BAR — Page / Whole result / Modify / Selected / Export ─────────
+   Left at Adminer's defaults this bar is expensive: `.footer` carries
+   `margin:23px -20px .5em 0`, every `fieldset` adds `padding:.5em .8em`, and
+   the `p` inside each one inherits `margin:.8em 20px 0 0`. Stacked up that is
+   roughly two table rows given away on every Select page, on a bar that is
+   only ever glanced at.
+
+   Geometry is copied from the top toolbar rules above (fieldset
+   `0 8px 2px`, legend `.8em` muted, buttons `4px 8px`) so the two bars read
+   as one system rather than two accidents. Everything is scoped under
+   `.footer` - the toolbar selectors are `#content #form > fieldset` and must
+   not be touched. */
+.footer {
+	margin-top: 8px;
+}
+
+.footer > div {
+	padding-bottom: 2px;
+}
+
+.footer fieldset {
+	padding: 0 8px 2px;
+	margin: 0 6px 0 0;
+}
+
+.footer fieldset > legend {
+	padding: 0 6px;
+	font-size: 0.8em;
+	color: var(--muted);
+}
+
+/* The remaining height is the inner block's inherited top margin. */
+.footer fieldset > div,
+.footer fieldset > p,
+.footer p {
+	margin-top: 2px;
+	margin-bottom: 0;
+}
+
+.footer fieldset input[type="submit"],
+.footer fieldset input[type="button"],
+.footer fieldset button {
+	padding: 3px 8px;
 }

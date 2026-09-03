@@ -142,6 +142,47 @@ final class AdminerConnectionSwitcher extends Adminer\Plugin {
 		return $ordered;
 	}
 
+	/**
+	 * The connection currently being viewed, always resolvable from the request.
+	 *
+	 * connections() only lists (server, database) pairs it can prove from the
+	 * session or the permanent cookie, so every entry for a server carries a
+	 * concrete database. The database-selection page carries a server but no
+	 * database (Adminer\DB === ""), so none of those entries matches the view
+	 * and the switcher button would fall back to the generic "Connections"
+	 * label - even though you are plainly inside a connection. This descriptor
+	 * is derived straight from the current URL instead, so the button can name
+	 * the current connection on every page. On the database-selection page db
+	 * is "" and callers fall back to the server host for the label, matching
+	 * what the breadcrumb already shows.
+	 */
+	private function currentDescriptor() {
+		if (!isset($_GET["username"])) {
+			return null;
+		}
+		$driver = Adminer\DRIVER;
+		$server = Adminer\SERVER;
+		$username = $_GET["username"];
+		$db = Adminer\DB;
+		$key = self::keyOf($driver, $server, $username, $db);
+		// The connection-level alias lives in the empty-database slot of the
+		// names map, so it is one name for the whole connection regardless of
+		// which database is open. keyOf(...,"") is exactly the key the
+		// database-selection page already carries, so serverName() shows the
+		// same alias in the breadcrumb there for free.
+		$connKey = self::keyOf($driver, $server, $username, "");
+		return array(
+			'key' => $key,
+			'name' => (string) $this->names()[$key],
+			'connKey' => $connKey,
+			'connName' => (string) $this->names()[$connKey],
+			'db' => $db,
+			'server' => ($server != "" ? $server : 'default'),
+			'sub' => "$username@" . ($server != "" ? $server : 'default')
+				. '  ·  ' . (Adminer\get_setting("vendor-$driver-$server") ?: Adminer\get_driver($driver) ?: $driver),
+		);
+	}
+
 	/** Mirrors auth_url()'s driver handling: "server" with an empty host is implicit. */
 	private static function urlFor($driver, $server, $username, $db) {
 		$q = array();
@@ -585,6 +626,47 @@ body:has(#username) #logins li.cs-chip--edit > .cs-chip-form {
 	color: var(--accent);
 	outline: none;
 }
+/* Pencil that renames the whole connection, sitting just left of the switcher
+   button. Faint until the cluster is hovered so it does not compete with the
+   name for attention. */
+.cs-pen {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	margin-right: 4px;
+	padding: 0;
+	border: 1px solid transparent;
+	border-radius: var(--radius-sm);
+	background: transparent;
+	color: var(--muted);
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.cs-wrap:hover .cs-pen,
+.cs-pen:focus-visible {
+	opacity: 1;
+}
+.cs-pen:hover,
+.cs-pen:focus-visible {
+	color: var(--accent);
+	border-color: var(--accent);
+	outline: none;
+}
+.cs-name-edit {
+	box-sizing: border-box;
+	width: 16em;
+	max-width: 60vw;
+	padding: 3px 8px;
+	border: 1px solid var(--accent);
+	border-radius: var(--radius-sm);
+	background: var(--bg);
+	color: var(--fg);
+	font: inherit;
+	font-size: 11.5px;
+}
 .cs-ico {
 	width: 14px;
 	height: 14px;
@@ -714,6 +796,11 @@ body:has(#username) #logins li.cs-chip--edit > .cs-chip-form {
 <script<?php echo Adminer\nonce(); ?>>
 (() => {
 	const CONNS = <?php echo $json($this->connections()); ?>;
+	// The exact connection this page is inside, server-level when no database
+	// is selected. Always present here (head() has already returned for the
+	// login page), so the button can name the current connection on every
+	// screen instead of only the ones whose database matches a saved entry.
+	const CURRENT = <?php echo $json($this->currentDescriptor()); ?>;
 	const NAMES_COOKIE = <?php echo $json(self::NAMES_COOKIE); ?>;
 	const LAST_COOKIE = <?php echo $json(self::LAST_COOKIE); ?>;
 	const NEW_URL = <?php echo $json('./?' . self::NEW_PARAM . '=1'); ?>;
@@ -747,11 +834,26 @@ body:has(#username) #logins li.cs-chip--edit > .cs-chip-form {
 				map[c.key] = c.name;
 			}
 		}
+		// The connection-level alias is not a CONNS row (those all carry a
+		// database), so it must be re-added by hand or this rewrite would drop
+		// it. Written last so it wins if a database-less CONNS row shares the key.
+		if (CURRENT && CURRENT.connName) {
+			map[CURRENT.connKey] = CURRENT.connName;
+		}
 		const value = encodeURIComponent(JSON.stringify(map));
 		document.cookie = NAMES_COOKIE + '=' + value + ';path=/;max-age=31536000;samesite=lax';
 	};
 
 	const label = (c) => c.name || c.db || NO_DB;
+	// The switcher button always prefers the connection alias, on every screen;
+	// only without one does it fall back to the open database or the host.
+	const buttonLabel = () => {
+		if (CURRENT && CURRENT.connName) {
+			return CURRENT.connName;
+		}
+		const c = CONNS.find((x) => x.current) || CURRENT;
+		return c ? (c.name || c.db || c.server) : 'Connections';
+	};
 
 	const boot = () => {
 		const logout = document.querySelector('#foot button[name="logout"], #foot input[name="logout"]');
@@ -776,11 +878,68 @@ body:has(#username) #logins li.cs-chip--edit > .cs-chip-form {
 		btn.className = 'cs-btn';
 		btn.append(svgFor(ICON_DB));
 		const btnText = document.createElement('span');
-		btnText.textContent = current ? label(current) : 'Connections';
+		btnText.textContent = buttonLabel();
 		btn.append(btnText);
-		btn.title = current ? current.sub : 'Switch connection';
+		btn.title = CURRENT ? CURRENT.sub : 'Switch connection';
 		btn.setAttribute('aria-haspopup', 'menu');
 		btn.setAttribute('aria-expanded', 'false');
+		const refreshButton = () => {
+			btnText.textContent = buttonLabel();
+		};
+
+		// Pencil that renames the whole connection. Its alias lives in the
+		// empty-database slot of the names map (CURRENT.connKey), so it stays the
+		// same name no matter which database is open, and the button prefers it.
+		const connPen = document.createElement('button');
+		connPen.type = 'button';
+		connPen.className = 'cs-pen';
+		connPen.title = RENAME;
+		connPen.setAttribute('aria-label', RENAME);
+		connPen.append(svgFor(ICON_PEN));
+
+		const connInput = document.createElement('input');
+		connInput.className = 'cs-name-edit';
+		connInput.maxLength = MAX_NAME;
+		connInput.placeholder = CURRENT ? CURRENT.server : '';
+		connInput.hidden = true;
+
+		const stopConnEdit = () => {
+			connInput.hidden = true;
+			btn.hidden = false;
+			connPen.hidden = false;
+		};
+		const commitConnEdit = () => {
+			if (connInput.hidden) {
+				return;                         // guard the blur that our own commit triggers
+			}
+			if (CURRENT) {
+				CURRENT.connName = connInput.value.trim().slice(0, MAX_NAME);
+			}
+			persistNames();
+			refreshButton();
+			stopConnEdit();
+		};
+		connPen.addEventListener('click', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			connInput.value = (CURRENT && CURRENT.connName) || '';
+			btn.hidden = true;
+			connPen.hidden = true;
+			connInput.hidden = false;
+			connInput.focus();
+			connInput.select();
+		});
+		connInput.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				commitConnEdit();
+			} else if (e.key === 'Escape') {
+				e.preventDefault();
+				e.stopPropagation();
+				stopConnEdit();
+			}
+		});
+		connInput.addEventListener('blur', commitConnEdit);
 
 		const menu = document.createElement('div');
 		menu.className = 'cs-menu';
@@ -830,9 +989,9 @@ body:has(#username) #logins li.cs-chip--edit > .cs-chip-form {
 				persistNames();
 				main.textContent = label(c);
 				sub.textContent = c.sub + (c.name && c.db ? '  ·  ' + c.db : '') + (c.current ? '  ·  current' : '');
-				if (c.current) {
-					btnText.textContent = label(c);
-				}
+				// A connection alias, if set, keeps priority on the button; only
+				// its absence lets a per-database rename surface there.
+				refreshButton();
 				stopEdit();
 			};
 
@@ -918,7 +1077,7 @@ body:has(#username) #logins li.cs-chip--edit > .cs-chip-form {
 			}
 		});
 
-		wrap.append(btn, menu);
+		wrap.append(connPen, connInput, btn, menu);
 		host.prepend(wrap);
 	};
 
