@@ -47,8 +47,11 @@ final class AdminerSelectEditHighlight extends Adminer\Plugin {
 			form.addEventListener('submit', () => {
 				const keys = new Set();
 				// A value cell holding a control is a cell Adminer opened for
-				// editing - whatever its data type.
-				for (const ed of grid.querySelectorAll('td[id^="val["] input, td[id^="val["] textarea, td[id^="val["] select')) {
+				// editing - whatever its data type. Disabled editors are excluded
+				// from the POST (select-inline-choice disables the cells it is not
+				// committing), so skip them: only rows that are actually saved get
+				// highlighted.
+				for (const ed of grid.querySelectorAll('td[id^="val["] input:not([disabled]), td[id^="val["] textarea:not([disabled]), td[id^="val["] select:not([disabled])')) {
 					const td = ed.closest('td[id^="val["]');
 					if (td) {
 						keys.add(rowKeyOf(td));
@@ -73,6 +76,13 @@ final class AdminerSelectEditHighlight extends Adminer\Plugin {
 			stored = null;
 		}
 		if (!Array.isArray(stored) || !stored.length) {
+			return;
+		}
+		// A failed save does NOT redirect: Adminer re-renders this same page with
+		// a <div class="error"> above the grid. Highlighting then would mark the
+		// row as saved when the write was actually rejected, so bail on any error.
+		// (A successful save redirects to a clean page, shown with .message.)
+		if (document.querySelector('.error')) {
 			return;
 		}
 		const wanted = new Set(stored);

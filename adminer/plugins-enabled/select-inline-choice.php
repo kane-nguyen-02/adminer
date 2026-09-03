@@ -228,6 +228,17 @@ final class AdminerSelectInlineChoice extends Adminer\Plugin {
 				if (!form) {
 					return;
 				}
+				// Commit ONLY this cell. Adminer's inline save posts every open
+				// editor in the form, so without this an auto-submit would also
+				// flush any other cell the user left mid-edit (e.g. a half-typed
+				// text/number field), saving an unintended value. Disabling the
+				// other editors keeps them out of the POST; they are discarded,
+				// never silently saved.
+				for (const other of grid.querySelectorAll('td[id^="val["] input, td[id^="val["] textarea, td[id^="val["] select')) {
+					if (other !== sel) {
+						other.disabled = true;
+					}
+				}
 				if (typeof form.requestSubmit === 'function') {
 					form.requestSubmit();
 				} else {

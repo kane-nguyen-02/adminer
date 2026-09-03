@@ -417,9 +417,15 @@ td[id^="val["].cell-filter-target {
 					}
 				}
 			} else if (meta && meta.kind === 'bool' && has('=')) {
-				addGroup('Boolean');
-				addBtn('= true', () => applyFilter(col, '=', 'true', false));
-				addBtn('= false', () => applyFilter(col, '=', 'false', false));
+				// Only the OTHER value: '= <current>' is already the generic
+				// button above, so offering both here would duplicate it.
+				const others = ['true', 'false'].filter((v) => v !== value);
+				if (others.length) {
+					addGroup('Boolean');
+					for (const v of others) {
+						addBtn('= ' + v, () => applyFilter(col, '=', v, false));
+					}
+				}
 			}
 		}
 
