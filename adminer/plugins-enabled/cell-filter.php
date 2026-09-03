@@ -11,6 +11,112 @@
  * why number cells felt fine and UUID/text cells felt flaky.
  */
 final class AdminerCellFilter extends Adminer\Plugin {
+	/**
+	 * Guarded like select-smart-filter/structure-enum: head() also runs on the
+	 * login page where $_GET survives but no connection exists, and an
+	 * unguarded query there fatals the whole console.
+	 */
+	private function connected(): bool {
+		if (!isset($_GET['username'])) {
+			return false;
+		}
+		try {
+			return (bool) Adminer\connection();
+		} catch (\Throwable $e) {
+			return false;
+		}
+	}
+
+	private function schema(): string {
+		$ns = isset($_GET['ns']) ? (string) $_GET['ns'] : '';
+		return $ns !== '' ? $ns : 'public';
+	}
+
+	/**
+	 * Per-column type info for the current Select table, so the menu can offer
+	 * type-aware suggestions (enum siblings, numeric/date comparisons, booleans)
+	 * instead of only the clicked value.
+	 *
+	 * PostgreSQL only, straight from the catalog - two small queries, no user
+	 * data. Other drivers get the generic menu unchanged (empty map).
+	 *
+	 * @return array<string,array{kind:string,type:string,values:list<string>}>
+	 */
+	private function columnMeta(): array {
+		if (!$this->connected() || Adminer\DRIVER !== 'pgsql') {
+			return array();
+		}
+		$table = isset($_GET['select']) ? (string) $_GET['select'] : '';
+		if ($table === '') {
+			return array();
+		}
+		$schema = Adminer\q($this->schema());
+		$rel = Adminer\q($table);
+
+		try {
+			$conn = Adminer\connection();
+			$res = $conn->query("
+				SELECT a.attname, t.typname, t.typtype
+				FROM pg_attribute a
+				JOIN pg_class c ON c.oid = a.attrelid
+				JOIN pg_namespace n ON n.oid = c.relnamespace
+				JOIN pg_type t ON t.oid = a.atttypid
+				WHERE n.nspname = $schema AND c.relname = $rel
+					AND a.attnum > 0 AND NOT a.attisdropped
+			");
+			if (!$res) {
+				return array();
+			}
+			$cols = array();
+			$needEnum = false;
+			while ($row = $res->fetch_row()) {
+				$cols[(string) $row[0]] = array('typname' => (string) $row[1], 'typtype' => (string) $row[2]);
+				if ($row[2] === 'e') {
+					$needEnum = true;
+				}
+			}
+		} catch (\Throwable $e) {
+			return array();
+		}
+
+		$labels = array();
+		if ($needEnum) {
+			try {
+				$res2 = $conn->query("
+					SELECT t.typname, e.enumlabel
+					FROM pg_type t
+					JOIN pg_enum e ON e.enumtypid = t.oid
+					JOIN pg_namespace n ON n.oid = t.typnamespace
+					WHERE n.nspname = $schema
+					ORDER BY t.typname, e.enumsortorder
+				");
+				if ($res2) {
+					while ($row = $res2->fetch_row()) {
+						$labels[(string) $row[0]][] = (string) $row[1];
+					}
+				}
+			} catch (\Throwable $e) {
+				// Enum siblings are a bonus; fall through with what we have.
+			}
+		}
+
+		$numeric = array('int2', 'int4', 'int8', 'float4', 'float8', 'numeric', 'decimal', 'real', 'money');
+		$temporal = array('date', 'time', 'timetz', 'timestamp', 'timestamptz');
+		$out = array();
+		foreach ($cols as $name => $c) {
+			$t = strtolower($c['typname']);
+			if ($c['typtype'] === 'e' && isset($labels[$c['typname']])) {
+				$out[$name] = array('kind' => 'enum', 'type' => $c['typname'], 'values' => $labels[$c['typname']]);
+			} else {
+				$kind = ($t === 'bool' ? 'bool'
+					: (in_array($t, $numeric, true) ? 'number'
+					: (in_array($t, $temporal, true) ? 'date' : 'text')));
+				$out[$name] = array('kind' => $kind, 'type' => $c['typname'], 'values' => array());
+			}
+		}
+		return $out;
+	}
+
 	function head($dark = null) {
 		if (!isset($_GET['select'])) {
 			return;
@@ -116,9 +222,22 @@ td[id^="val["].cell-filter-target {
 	font-size: smaller;
 	word-break: break-all;
 }
+/* Small heading above a type-aware group (enum siblings, comparisons, …). */
+#cell-filter-menu .cell-filter-group {
+	padding: .35em .75em .1em;
+	margin-top: .15em;
+	border-top: 1px solid var(--border, #888);
+	opacity: .6;
+	font-size: smaller;
+	text-transform: uppercase;
+	letter-spacing: .03em;
+}
 </style>
 <script<?php echo Adminer\nonce(); ?>>
 (() => {
+	// Per-column type info (enum values, numeric/date/bool) for this table, so
+	// the menu can suggest siblings and comparisons. Empty on non-pgsql.
+	const COLTYPES = <?php echo json_encode($this->columnMeta(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 	const MENU_ID = 'cell-filter-menu';
 	let ignoreScrollUntil = 0;
 	let activeTd = null;
@@ -247,6 +366,13 @@ td[id^="val["].cell-filter-target {
 			menu.appendChild(btn);
 		};
 
+		const addGroup = (label) => {
+			const g = document.createElement('div');
+			g.className = 'cell-filter-group';
+			g.textContent = label;
+			menu.appendChild(g);
+		};
+
 		const hint = document.createElement('div');
 		hint.className = 'cell-filter-hint';
 		hint.textContent = col + (isNull ? ' · NULL' : ' · ' + preview(value));
@@ -269,6 +395,31 @@ td[id^="val["].cell-filter-target {
 			const likeOp = has('ILIKE %%') ? 'ILIKE %%' : (has('LIKE %%') ? 'LIKE %%' : null);
 			if (likeOp) {
 				addBtn('Contains…', () => applyFilter(col, likeOp, value, false));
+			}
+
+			// Type-aware suggestions on top of the value the user clicked.
+			const meta = COLTYPES && COLTYPES[col] ? COLTYPES[col] : null;
+			if (meta && meta.kind === 'enum' && Array.isArray(meta.values) && has('=')) {
+				// The request: for an enum, also offer "= <each other value>".
+				const others = meta.values.filter((v) => v !== value);
+				if (others.length) {
+					addGroup('Other ' + meta.type + ' values');
+					for (const v of others) {
+						addBtn('= ' + preview(v), () => applyFilter(col, '=', v, false));
+					}
+				}
+			} else if (meta && (meta.kind === 'number' || meta.kind === 'date')) {
+				const cmp = ['>', '>=', '<', '<='].filter(has);
+				if (cmp.length) {
+					addGroup(meta.kind === 'date' ? 'Compare (time)' : 'Compare');
+					for (const op of cmp) {
+						addBtn(op + ' ' + preview(value), () => applyFilter(col, op, value, false));
+					}
+				}
+			} else if (meta && meta.kind === 'bool' && has('=')) {
+				addGroup('Boolean');
+				addBtn('= true', () => applyFilter(col, '=', 'true', false));
+				addBtn('= false', () => applyFilter(col, '=', 'false', false));
 			}
 		}
 
